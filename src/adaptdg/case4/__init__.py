@@ -1,4 +1,4 @@
-"""Case 4 (evolving porosity, Xie B2) transport and ADAP modules (piece 9).
+"""Case 4 (evolving porosity, Xie B2) transport and ADAP modules.
 
 Importing this package imports nothing heavy; dolfinx/ufl/petsc4py/mpi4py are loaded
 inside the solver constructors. Chemistry is never imported here: the transport

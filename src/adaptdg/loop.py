@@ -1,7 +1,7 @@
 """Adaptive loop (2D) with chemistry supplied by callbacks.
 
 Provenance: ``AdaptiveTransport`` is a skeleton stub. The rest is copied from ASRTM-PHREEQC
-(source repo asrtm-phreeqc-public, commit a152b91),
+(source: ASRTM-PHREEQC),
 ``src/asrtm_phreeqc/adaptive_calcite_dolomite_2d.py``: ``NegativeTransportCorrection2D``,
 ``AdaptiveRefinementSnapshot2D``, ``_prepare_chemistry_component_2d``,
 ``_solve_one_adaptive_transport_step_2d``, ``_rectangle_inventory``, ``_triangle_inventory``,
@@ -10,7 +10,7 @@ operations and numerics are unchanged. The chemistry and config touchpoints beca
 ``LoopSettings2D`` (replaces ``load_case``), ``ChemistryCallbacks2D`` (replaces the PHREEQC engine,
 the mineral fields and the solid inventory), the ``components`` argument (replaces
 ``COMPONENTS_2D``) and ``model_floor`` (replaces ``PHREEQC_MODEL_FLOOR_MOL_L``).
-The Dörfler union is ``adaptdg.marking.dorfler_union_2d``. See docs/DESIGN.md, Piece 6.
+The Dörfler union is ``adaptdg.marking.dorfler_union_2d``. See docs/DESIGN.md.
 """
 
 from __future__ import annotations

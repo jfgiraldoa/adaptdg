@@ -1,4 +1,4 @@
-"""Tests for the 1D DG1/CG1 transport extracted from ASRTM-PHREEQC (piece 5a).
+"""Tests for the 1D DG1/CG1 transport extracted from ASRTM-PHREEQC.
 
 The numpy-only tests are adapted from the source ``tests/test_porosity_transport_1d.py``.
 The dolfinx tests are new smoke/conservation checks (the source has none for

@@ -67,7 +67,7 @@ class FakeChemistry:
 
 
 def _dorfler_union_inline(indicators, sizes, h_chem, theta, eligibility_factor, epsilon_chem, tie_tolerance):
-    """Body of ``methods/momas2d/adap.py::dorfler_union`` (asrtm-phreeqc-public @ a152b91), verbatim."""
+    """Body of ``methods/momas2d/adap.py::dorfler_union`` (ASRTM-PHREEQC), verbatim."""
     eligible = sizes > eligibility_factor * h_chem
     marked = np.zeros(sizes.size, dtype=bool)
     for values in indicators:

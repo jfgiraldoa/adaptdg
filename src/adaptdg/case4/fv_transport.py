@@ -11,7 +11,7 @@ Each substep is one implicit-Euler step of ``phi dC/dt + d(qC)/dx = 0`` with
 upwind fluxes, fixed inlet value and free outflow (fv_upwind_step). Implicit upwind is monotone, so no
 positivity correction is needed (none is applied; the minimum is logged).
 
-Provenance: copied from asrtm-phreeqc-public @ a152b91, methods/case4dev/fv_transport.py. Numerics, public names and operation
+Provenance: copied from ASRTM-PHREEQC, methods/case4dev/fv_transport.py. Numerics, public names and operation
 order unchanged; imports re-pointed to adaptdg (benchmark constants in ``adaptdg.case4.constants``,
 ``dorfler_mark_1d`` / ``gradient_jump_indicator_1d`` / ``conservative_positive_projection_1d`` from
 ``adaptdg.marking`` / ``adaptdg.transport``).

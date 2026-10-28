@@ -25,7 +25,7 @@ J^(n+1) - J^n = dt * (inflow - outflow). ``bdf2_offset`` returns
 introduced by the backward-Euler start, so the runner can check the
 cumulative balance exactly.
 
-Provenance: copied from asrtm-phreeqc-public @ a152b91, methods/case4dev/transport_bdf2.py. Numerics, public names and operation
+Provenance: copied from ASRTM-PHREEQC, methods/case4dev/transport_bdf2.py. Numerics, public names and operation
 order unchanged; imports re-pointed to adaptdg (benchmark constants in ``adaptdg.case4.constants``,
 ``dorfler_mark_1d`` / ``gradient_jump_indicator_1d`` / ``conservative_positive_projection_1d`` from
 ``adaptdg.marking`` / ``adaptdg.transport``).

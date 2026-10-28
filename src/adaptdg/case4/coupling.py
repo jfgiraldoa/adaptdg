@@ -4,7 +4,7 @@ Both backends transport every RM component on a fixed chemistry grid. The
 geometry timing is explicit because the original DG and adaptive prototypes
 used different splitting sequences. Their defaults are retained for regression.
 
-Provenance: copied from asrtm-phreeqc-public @ a152b91, src/asrtm_phreeqc/porosity/coupling.py.
+Provenance: copied from ASRTM-PHREEQC, src/asrtm_phreeqc/porosity/coupling.py.
 Deviations: ``run_uniform_case4`` (builds ``Case4Chemistry``) is omitted; ``update_geometry`` and
 ``advance_case4_step`` take a required keyword-only ``model`` supplying
 what the source imported from ``.case4`` / ``.geometry`` (``Case4Model`` Protocol): ``VM_M3_MOL``,

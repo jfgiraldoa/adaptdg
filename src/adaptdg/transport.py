@@ -1,6 +1,6 @@
-"""DG1 / CG1 one-dimensional transport solvers (piece 5a) and a step stub.
+"""DG1 / CG1 one-dimensional transport solvers and a step stub.
 
-Extracted from ASRTM-PHREEQC (commit a152b91) without changing numerics or
+Extracted from ASRTM-PHREEQC without changing numerics or
 public names. Two source modules live here, section by section; each keeps the
 unit convention of its origin (NOT harmonised, see docs/DESIGN.md):
 
@@ -40,7 +40,7 @@ def transport_step(c_old: Any, flow: Any, dt: float, **options: Any) -> Any:
 
 
 # ---------------------------------------------------------------------------
-# Section A: ASRTM-PHREEQC src/asrtm_phreeqc/dg_transport_1d.py @ a152b91
+# Section A: ASRTM-PHREEQC src/asrtm_phreeqc/dg_transport_1d.py
 # ---------------------------------------------------------------------------
 
 def nonnegative_means(values, weights):
@@ -230,7 +230,7 @@ class ConservativeDG1D:
 
 
 # ---------------------------------------------------------------------------
-# Section B: ASRTM-PHREEQC src/asrtm_phreeqc/porosity/transport_1d.py @ a152b91
+# Section B: ASRTM-PHREEQC src/asrtm_phreeqc/porosity/transport_1d.py
 # (``dorfler_mark_1d`` is imported from adaptdg.marking, see module docstring)
 # ---------------------------------------------------------------------------
 

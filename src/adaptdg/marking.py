@@ -1,6 +1,6 @@
 """Cell marking strategies (Dörfler / bulk marking).
 
-Extracted from ASRTM-PHREEQC (commit a152b91) without changing the numerics.
+Extracted from ASRTM-PHREEQC without changing the numerics.
 Two layers:
 
 * ``dorfler_union``: generic, numpy-only core (species union, eligibility by

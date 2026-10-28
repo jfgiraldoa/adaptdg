@@ -23,7 +23,7 @@ Saddle point [[G, B], [B^T, 0]] [r; c] = [L; 0] with
   B = s_K M + dt beta C, plus dt*beta at the inlet (r_L0, c_0),
   L = s_K M u_prev + dt*beta*c_in at r_L0;  s_K = phi_K/phi0, beta = q/phi0.
 
-Provenance: copied from asrtm-phreeqc-public @ a152b91, methods/case4dev/adap_fast.py. Numerics, public names and operation
+Provenance: copied from ASRTM-PHREEQC, methods/case4dev/adap_fast.py. Numerics, public names and operation
 order unchanged; imports re-pointed to adaptdg (benchmark constants in ``adaptdg.case4.constants``,
 ``dorfler_mark_1d`` / ``gradient_jump_indicator_1d`` / ``conservative_positive_projection_1d`` from
 ``adaptdg.marking`` / ``adaptdg.transport``).

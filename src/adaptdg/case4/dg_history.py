@@ -30,7 +30,7 @@ positivity="local_minmod" -> as "local", plus a minmod slope limiter (dg1 only,
                    Applied only to element totals: PhreeqcRM's H, O (excess
                    over H2O), H2O and Charge are not sign-constrained.
 
-Provenance: copied from asrtm-phreeqc-public @ a152b91, methods/case4dev/dg_history.py. Numerics, public names and operation
+Provenance: copied from ASRTM-PHREEQC, methods/case4dev/dg_history.py. Numerics, public names and operation
 order unchanged; imports re-pointed to adaptdg (benchmark constants in ``adaptdg.case4.constants``,
 ``dorfler_mark_1d`` / ``gradient_jump_indicator_1d`` / ``conservative_positive_projection_1d`` from
 ``adaptdg.marking`` / ``adaptdg.transport``).

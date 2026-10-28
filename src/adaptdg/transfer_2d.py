@@ -1,6 +1,6 @@
 """Conservative transfers between adaptive triangles and a Cartesian chemistry grid.
 
-Extracted unchanged from ASRTM-PHREEQC (src/asrtm_phreeqc/transfer_2d.py, commit a152b91).
+Extracted unchanged from ASRTM-PHREEQC (src/asrtm_phreeqc/transfer_2d.py).
 """
 
 from __future__ import annotations

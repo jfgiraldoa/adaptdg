@@ -1,6 +1,6 @@
 """Conservative DG1 control for the evolving-porosity 1D benchmark.
 
-Provenance: copied from asrtm-phreeqc-public @ a152b91, src/asrtm_phreeqc/porosity/dg_1d.py. Numerics, public names and operation
+Provenance: copied from ASRTM-PHREEQC, src/asrtm_phreeqc/porosity/dg_1d.py. Numerics, public names and operation
 order unchanged; imports re-pointed to adaptdg (benchmark constants in ``adaptdg.case4.constants``,
 ``dorfler_mark_1d`` / ``gradient_jump_indicator_1d`` / ``conservative_positive_projection_1d`` from
 ``adaptdg.marking`` / ``adaptdg.transport``).

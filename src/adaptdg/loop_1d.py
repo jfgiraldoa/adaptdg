@@ -1,6 +1,6 @@
 """New 1D ADAP driver (paper method, current code), generic in the chemistry.
 
-Extracted from ASRTM-PHREEQC (asrtm-phreeqc-public @ a152b91, methods/onedim/adap1d.py): numerics,
+Extracted from ASRTM-PHREEQC (methods/onedim/adap1d.py): numerics,
 class and method names unchanged. Deviations: the relative import of the operator points to
 ``adaptdg.rm_1d``, ``Adap1DRun._marking`` calls ``adaptdg.marking.dorfler_union_1d_adap`` (the
 exact adapter of the former body) and the duck-typed chemistry interface is documented by the

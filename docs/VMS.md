@@ -81,3 +81,10 @@ DoF^(-(p+1)/2) for p = 1..4, while uniform refinement stalls at DoF^(-1/3).
     from adaptdg.vms.run import run_from_json
     out = run_from_json("problem.json", "numerics.json", "out", p=2)
     out["history"], out["slopes"]
+
+## Known differences from the paper
+
+* `beta = (1, 0)` is used in the heterogeneous case because the exact solution needs it; the paper prints `(0, 1)`.
+* The Gram form uses the energy form `kappa |grad w|^2` in eq. (14), as the legacy code did.
+* In the Vh norm the reconstruction `phi` was measured to be 1.1-1.28 times worse than `theta`, whereas the paper
+  states that it improves the Vh error: under investigation.

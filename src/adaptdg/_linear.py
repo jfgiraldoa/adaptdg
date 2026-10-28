@@ -5,8 +5,7 @@ transport operators used here are constant while only the previous state and
 inflow on the right-hand side change.  This wrapper assembles the operator
 once and reuses its PETSc KSP/preconditioner for subsequent right-hand sides.
 
-Extracted unchanged from ASRTM-PHREEQC (src/asrtm_phreeqc/reusable_linear_problem.py,
-commit a152b91). dolfinx/petsc4py are imported lazily inside the methods.
+Extracted unchanged from ASRTM-PHREEQC (src/asrtm_phreeqc/reusable_linear_problem.py). dolfinx/petsc4py are imported lazily inside the methods.
 """
 
 from __future__ import annotations

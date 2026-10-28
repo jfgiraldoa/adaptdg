@@ -1,6 +1,6 @@
 """NumPy residual-minimisation operator in 1D (paper method, with diffusion).
 
-Extracted unchanged from ASRTM-PHREEQC (asrtm-phreeqc-public @ a152b91, methods/onedim/rm1d.py);
+Extracted unchanged from ASRTM-PHREEQC (methods/onedim/rm1d.py);
 the numerics, class and method names are those of the source.
 
 Exact NumPy transcription of ``asrtm_phreeqc.stabilized_transport.ResidualMinimizationBackwardEuler1D``

@@ -1,6 +1,6 @@
 """MoMaS 2D uniform coupled run: conservative DG1 transport + chemistry on a triangular mesh.
 
-Extracted from ASRTM-PHREEQC (asrtm-phreeqc-public @ a152b91, ``methods/momas2d/coupled.py``):
+Extracted from ASRTM-PHREEQC (``methods/momas2d/coupled.py``):
 ``run_coupled`` and ``square_groups``, numerics, names and operation order unchanged; ``POSITIVE`` as in
 the source. Same loop and conservation gates as the 1D MoMaS driver (transport -> chemistry -> replace DG means;
 components 1e-8, sites 1e-8, water 1e-6).

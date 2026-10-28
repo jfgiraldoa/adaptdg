@@ -1,7 +1,7 @@
 """Mesh refinement, persistent-mesh policy and predictive reactive mesh (2D).
 
 Provenance: ``adapt_mesh`` is a skeleton stub. The rest is copied from ASRTM-PHREEQC
-(source repo asrtm-phreeqc-public, commit a152b91):
+(source: ASRTM-PHREEQC):
 - ``src/asrtm_phreeqc/reactive_transport_policy_2d.py`` (``ReactiveTransportPolicy2D``,
   ``reactive_front_seed_regions``, ``reactive_front_seed_points``,
   ``create_predictive_reactive_mesh_2d``), only the import lines changed;

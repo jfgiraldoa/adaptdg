@@ -7,4 +7,48 @@ authors:
     given-names: "Juan Felipe"
 license: MIT
 repository-code: "https://github.com/jfgiraldoa/adaptdg"
-# TODO: doi, date-released
+# TODO: software doi and date-released with the first release
+abstract: "Adaptive stabilised discontinuous-Galerkin / residual-minimisation transport and PDE solvers on FEniCSx."
+references:
+  - type: article
+    title: "An Adaptive in Space, Stabilized Finite Element Method via Residual Minimization for Linear and Nonlinear Unsteady Advection-Diffusion-Reaction Equations"
+    authors:
+      - {family-names: "Giraldo", given-names: "Juan Felipe"}
+      - {family-names: "Calo", given-names: "Victor M."}
+    journal: "Mathematical and Computational Applications"
+    volume: 28
+    issue: 1
+    start: 7
+    year: 2023
+    doi: "10.3390/mca28010007"
+  - type: article
+    title: "A variational multiscale method derived from an adaptive stabilized conforming finite element method via residual minimization on dual norms"
+    authors:
+      - {family-names: "Giraldo", given-names: "Juan Felipe"}
+      - {family-names: "Calo", given-names: "Victor M."}
+    journal: "Computer Methods in Applied Mechanics and Engineering"
+    volume: 417
+    start: 116285
+    year: 2023
+    doi: "10.1016/j.cma.2023.116285"
+  - type: article
+    title: "An unfitted domain approach using a stabilized residual minimization method for Dirichlet problems"
+    authors:
+      - {family-names: "Giraldo", given-names: "Juan Felipe"}
+      - {family-names: "Calo", given-names: "Victor M."}
+    journal: "Advances in Computational Science and Engineering"
+    volume: 4
+    year: 2025
+  - type: article
+    title: "An adaptive stabilized finite element method for coupled nonlinear reaction-diffusion systems"
+    authors:
+      - {family-names: "Liu", given-names: "C."}
+      - {family-names: "Giraldo", given-names: "Juan Felipe"}
+      - {family-names: "Calo", given-names: "Victor M."}
+      - {family-names: "Regenauer-Lieb", given-names: "K."}
+      - {family-names: "Hu", given-names: "M."}
+    journal: "Journal of Computational Physics"
+    volume: 548
+    start: 114598
+    year: 2026
+    doi: "10.1016/j.jcp.2025.114598"

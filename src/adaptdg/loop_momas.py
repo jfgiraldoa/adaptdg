@@ -1,6 +1,6 @@
 """MoMaS Easy 2D ADAP loop (adaptive RM transport on a fixed chemistry grid), generic in the chemistry.
 
-Extracted from ASRTM-PHREEQC (asrtm-phreeqc-public @ a152b91, ``methods/momas2d/adap.py``): the driver
+Extracted from ASRTM-PHREEQC (``methods/momas2d/adap.py``): the driver
 function ``run`` (kept under its name) and its helpers ``singularity_cap``, ``MeshFields``,
 ``dg1_transfer``, ``full_dg1``, ``linear_remap``, ``remap_history`` and the constants ``POSITIVE`` and
 ``SINGULAR_POINTS``; numerics, names and operation order unchanged. ``fast_refine_marked_triangles_with_parent``

@@ -24,7 +24,7 @@ dt) and Dirichlet-data oscillation (a point boundary in 1D).
 The mesh, history, increments, projection and coarsening are those of
 stage 2a/2b (transport_bdf2.BDF2AdaptiveTransport, adap_fast).
 
-Provenance: copied from asrtm-phreeqc-public @ a152b91, methods/case4dev/adap_asfem.py. Numerics, public names and operation
+Provenance: copied from ASRTM-PHREEQC, methods/case4dev/adap_asfem.py. Numerics, public names and operation
 order unchanged; imports re-pointed to adaptdg (benchmark constants in ``adaptdg.case4.constants``,
 ``dorfler_mark_1d`` / ``gradient_jump_indicator_1d`` / ``conservative_positive_projection_1d`` from
 ``adaptdg.marking`` / ``adaptdg.transport``).

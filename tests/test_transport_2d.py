@@ -1,4 +1,4 @@
-"""2D DG1 / residual-minimisation transport (piece 5b): smoke and conservation checks.
+"""2D DG1 / residual-minimisation transport: smoke and conservation checks.
 
 New tests (the source has none for these classes besides the parent-map test kept in
 ``test_transfer_2d.py``); bitwise equality with the source was shown separately.

@@ -21,7 +21,7 @@ lies inside one chemistry cell, so porosity is exact per transport cell and
 both transfers are exact and conservative. The coarsest transport cell is
 one chemistry cell.
 
-Provenance: copied from asrtm-phreeqc-public @ a152b91, methods/case4dev/adap_persistent.py. Numerics, public names and operation
+Provenance: copied from ASRTM-PHREEQC, methods/case4dev/adap_persistent.py. Numerics, public names and operation
 order unchanged; imports re-pointed to adaptdg (benchmark constants in ``adaptdg.case4.constants``,
 ``dorfler_mark_1d`` / ``gradient_jump_indicator_1d`` / ``conservative_positive_projection_1d`` from
 ``adaptdg.marking`` / ``adaptdg.transport``).

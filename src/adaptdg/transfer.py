@@ -1,6 +1,6 @@
 """Conservative transfer operators between transport and chemistry meshes.
 
-Extracted unchanged from ASRTM-PHREEQC (src/asrtm_phreeqc/transfer.py, commit a152b91).
+Extracted unchanged from ASRTM-PHREEQC (src/asrtm_phreeqc/transfer.py).
 """
 
 from __future__ import annotations
