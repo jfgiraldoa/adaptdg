@@ -14,7 +14,7 @@ not load dolfinx; the solver needs dolfinx 0.11 with PETSc and MUMPS and runs in
 | Paper | Where | Content |
 |---|---|---|
 | (8) | `dgforms.DGForms.b` | SWIP diffusion form, weights and harmonic mean `gamma_kappa` (scalar or tensor `kappa`) |
-| (9) | `dgforms.DGForms.b` | upwind advection form |
+| (9) | `dgforms.DGForms.b` | upwind advection form (inflow boundary term `bn (u_D - u) v`) |
 | (10) | `dgforms.penalty_field` | penalty `eta_K = (p+1)(p+d)/d A(dK)/V(K)` as a DG0 field |
 | (11) | `dgforms.DGForms.rhs` | source and weak (Nitsche) Dirichlet data |
 | (12)-(14) | `dgforms.DGForms.gram` | Gram form of the dG norm (L2 + jump/streamline upwind norm + SWIP norm) |
@@ -29,11 +29,44 @@ jump term (energy form); Dirichlet conditions are imposed on the tagged boundary
 (`Problem.dirichlet_tags`), other boundary faces are natural; errors use a high-degree
 quadrature of the exact solution (default 12) so singular data do not create an error floor.
 
+## Multiscale reconstruction (section 4)
+
+`reconstruction.reconstruct(result, adjoint_ordering="paper")` returns a `VMSResult(ubar, utilde, ucheck, phi,
+theta, u_full)`; all functions except `ubar` (CG(p)) live in the dG space DG(p) of the saddle point, and one
+factorisation of `b(v, .)` serves all right-hand sides.
+
+| Paper | Where | Content |
+|---|---|---|
+| (30) | `utilde` | fine scale, `b(v, utilde) = g(v, eps')`; `u_full = ubar + utilde` equals the dG solution `theta` (Remark 1, checked to round-off) |
+| (32) | `ucheck`, `phi` | adjoint reconstruction `b(v, ucheck) = g(v, eps') + b(eps', v)`, `phi = ubar + ucheck` |
+| (35) | | equivalent form `ucheck = utilde + uacute`, `b(v, uacute) = b(eps', v)` |
+| (6) | `theta` | dG baseline `b(v, theta) = l(v)` |
+
+`adjoint_ordering="paper"` puts `eps'` in the test slot of `b` (the adjoint operator, as written in eqs. 32 and 35);
+`"legacy"` uses `b(v, eps')`, as the original implementation did. They differ only when advection is present.
+`norms.error_norms_vms` returns the (L2, Vh) errors of `ubar`, `theta`, `u` and `phi`; setting `reconstruct`
+(and `adjoint_ordering`) in `numerics.json` adds `L2_theta, Vh_theta, L2_u, Vh_u, L2_phi, Vh_phi` to the loop history
+(and their slopes to `run_from_json`). Without it the history is unchanged.
+
+Measured behaviour: `phi` has a smaller L2 error than the dG solution (ratio 0.4-0.95 depending on the case) and
+a Vh error 1.1-1.3 times larger; the paper's claim of an improvement in the Vh norm is not reproduced with this
+Gram form.
+
+## Other cases
+
+`Heterogeneous` (section 5.4, eqs. 39-40) and `Anisotropic` (section 5.5, eq. 42), see
+`examples/vms/heterogeneous/` and `examples/vms/anisotropic/`. Note on eq. (38): the paper text prints
+`beta = (0, 1)` but the exact solution (39)-(40) is a function of `x` solving `-(eps u')' + u' = 0`, so the
+implementation uses `beta = (1, 0)`. The diffusivity of `Heterogeneous` is a DG0 tensor field (the SWIP weights need
+different values on the two sides of a facet) and its start mesh needs an even number of cells per side so that
+`x = 1/2` consists of mesh facets (preserved by bisection). `refinement = "uniform"` reproduces the original
+uniform runs. First release: Dirichlet boundaries only (no Neumann).
+
 ## Modules
 
-`problems` (`Problem`, `ReentrantCorner`, `Fichera3D`), `meshes` (crossed-triangle L-shape,
+`problems` (`Problem`, `ReentrantCorner`, `Fichera3D`, `Heterogeneous`, `Anisotropic`), `meshes` (crossed-triangle L-shape,
 Fichera cube, boundary tags), `dgforms`, `saddle` (`RMSolver`, `RMResult`), `refine`
-(`refine_marked`, `refine_uniform`, any dimension), `norms` (`error_norms`), `loop`
+(`refine_marked`, `refine_uniform`, any dimension), `norms` (`error_norms`, `error_norms_vms`), `reconstruction` (`reconstruct`, `VMSResult`), `loop`
 (`AdaptiveStationaryLoop`, `LoopSettings`, `fitted_slope`) and `run` (`run_from_json`).
 
 ## Example

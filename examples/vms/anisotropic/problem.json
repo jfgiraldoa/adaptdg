@@ -1,0 +1,7 @@
+{
+  "name": "anisotropic",
+  "dim": 2,
+  "r": 1e4,
+  "tau": 1e-3,
+  "initial_mesh_size": 4
+}

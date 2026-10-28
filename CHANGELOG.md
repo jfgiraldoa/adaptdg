@@ -6,6 +6,11 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `adaptdg.vms.reconstruction` (piece 4): fine scale `utilde`, adjoint multiscale reconstruction `phi = ubar + ucheck`
+  (`adjoint_ordering="paper"|"legacy"`) and the dG baseline `theta` from an `RMResult` (`reconstruct`, `VMSResult`);
+  `norms.error_norms_vms`; `numerics.json` key `reconstruct` adds their errors to the loop history.
+- `Heterogeneous` and `Anisotropic` VMS cases with examples `examples/vms/heterogeneous/` and `examples/vms/anisotropic/`
+  (piece 5).
 - `adaptdg.vms` (pieces 1-3): stationary adaptive residual-minimisation solver for scalar diffusion-advection problems
   (Giraldo & Calo 2023, CMAME 417, 116285): `problems`, `meshes` (L-shape, Fichera), `dgforms` (SWIP/upwind forms, Gram norm),
   `saddle` (`RMSolver`, DG(p) x CG(p), any p, 2D/3D), `refine`, `norms`, `loop` and the JSON loader `run`; example
@@ -41,6 +46,11 @@ versioning: Semantic Versioning.
   ASRTM-PHREEQC (commit a152b91) with chemistry as callbacks (`ChemistryCallbacks2D`) and numerical settings in
   `LoopSettings2D`; `adaptdg.mesh`: persistent-mesh policy and predictive reactive mesh. `AdaptiveTransport` and
   `adapt_mesh` remain stubs (piece 6).
+
+### Fixed
+- `adaptdg.vms.dgforms`: the weak inflow boundary term of the upwind advection form had the wrong sign (inconsistent
+  for nonzero Dirichlet data on the inflow boundary, rates degraded to about DoF^(-1/2) in Vh); the re-entrant
+  corner (no advection) and zero-data tests were not affected.
 
 ## [0.0.1] - unreleased
 

@@ -1,8 +1,9 @@
 """JSON loader: ``run_from_json(problem_json, numerics_json)`` -> history CSV + result dict.
 
-problem.json keys (defaults in brackets): name ["reentrant_corner"], kappa [1.0], beta [none],
-alpha [2/3, exponent of the exact solution; ``q`` for fichera], initial_mesh_size [4, even number
-of cells per side]. numerics.json keys: see :class:`~adaptdg.vms.loop.LoopSettings` (``eta_0`` is accepted for ``eta0``).
+problem.json keys (defaults in brackets): name ["reentrant_corner", "fichera", "heterogeneous",
+"anisotropic"], kappa [1.0], beta [none; (1, 0) for heterogeneous], alpha [2/3, exponent of the exact
+solution; ``q`` for fichera], eps1/eps2 [0.1/1.0, heterogeneous], r/tau [1e4/1e-3, anisotropic],
+initial_mesh_size [4, even number of cells per side]. numerics.json keys: see :class:`~adaptdg.vms.loop.LoopSettings` (``eta_0`` is accepted for ``eta0``).
 """
 
 from __future__ import annotations
@@ -26,16 +27,17 @@ def _load(spec: Any) -> dict[str, Any]:
 def build_problem(spec: dict[str, Any]) -> Problem:
     """Instantiate the problem named in ``spec`` (unknown names raise ``KeyError``)."""
     cls = PROBLEMS[spec.get("name", "reentrant_corner")]
+    names = {f.name for f in fields(cls)}
     kwargs: dict[str, Any] = {}
-    if "kappa" in spec:
+    if "kappa" in spec and "diffusivity" in names:
         kwargs["diffusivity"] = float(spec["kappa"])
-    if cls.__name__ == "ReentrantCorner":
-        if "alpha" in spec:
-            kwargs["alpha"] = float(spec["alpha"])
-        if spec.get("beta"):
-            kwargs["velocity"] = tuple(float(v) for v in spec["beta"])
-    elif "alpha" in spec:
-        kwargs["q"] = float(spec["alpha"])
+    if "alpha" in spec:
+        kwargs["alpha" if "alpha" in names else "q"] = float(spec["alpha"])
+    if spec.get("beta") and "velocity" in names:
+        kwargs["velocity"] = tuple(float(v) for v in spec["beta"])
+    for key in ("eps1", "eps2", "r", "tau"):  # Heterogeneous / Anisotropic parameters
+        if key in spec and key in names:
+            kwargs[key] = float(spec[key])
     return cls(**kwargs)
 
 
@@ -66,7 +68,8 @@ def run_from_json(problem_json: Any, numerics_json: Any, out_dir: Any = None,
     loop = AdaptiveStationaryLoop(problem, settings)
     history = loop.run(progress)
     d = problem.dim
-    slopes = {k: fitted_slope(history, k, d) for k in ("E", "L2", "Vh")} if len(history) > 3 else {}
+    keys = [k for k in history[0] if k not in ("level", "ndofs", "ncells", "time")]
+    slopes = {k: fitted_slope(history, k, d) for k in keys} if len(history) > 3 else {}
     out: dict[str, Any] = {"history": history, "settings": asdict(settings), "slopes": slopes,
                            "csv": None, "mesh": None}
     if out_dir is not None:

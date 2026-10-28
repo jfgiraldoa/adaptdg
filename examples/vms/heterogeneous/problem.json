@@ -1,0 +1,8 @@
+{
+  "name": "heterogeneous",
+  "dim": 2,
+  "eps1": 0.1,
+  "eps2": 1.0,
+  "beta": [1.0, 0.0],
+  "initial_mesh_size": 4
+}

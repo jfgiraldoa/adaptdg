@@ -38,6 +38,16 @@ def crossed_square(n: int, lo: float = -1.0, hi: float = 1.0, comm: Any = None) 
     )
 
 
+def crossed_rectangle(n: int, lo: tuple[float, float], hi: tuple[float, float],
+                      comm: Any = None) -> Any:
+    """``n x n`` rectangles on ``[lo, hi]``, each split into four triangles (crossed diagonals)."""
+    from dolfinx import mesh
+
+    return mesh.create_rectangle(
+        _comm(comm), [lo, hi], (n, n), mesh.CellType.triangle, diagonal=mesh.DiagonalType.crossed
+    )
+
+
 def l_shape(n: int, comm: Any = None) -> Any:
     """(-1,1)^2 minus the quadrant x>0, y<0; ``n`` (even) cells per side before the cut."""
     if n % 2:
