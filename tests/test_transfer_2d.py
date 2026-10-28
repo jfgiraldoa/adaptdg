@@ -1,6 +1,7 @@
 import unittest
 
 import numpy as np
+import pytest
 
 from adaptdg.transfer_2d import (
     clear_transfer_plan_cache,
@@ -151,6 +152,34 @@ class ConservativeTransfer2DTests(unittest.TestCase):
             incremental.triangles_to_rectangles(triangle_values),
             rebuilt.triangles_to_rectangles(triangle_values),
             atol=1.0e-14,
+        )
+
+    def test_refined_parent_map_matches_final_local_cell_order(self):
+        pytest.importorskip("dolfinx")
+        from adaptdg.transport_2d import (
+            create_rectangle_mesh_2d,
+            mesh_triangles,
+            refine_marked_triangles_with_parent,
+        )
+
+        domain = create_rectangle_mesh_2d(
+            lower=(0.0, 0.0), upper=(0.5, 0.5), cells=(5, 5)
+        )
+        parent_triangles = mesh_triangles(domain)
+        marked = np.zeros(parent_triangles.shape[0], dtype=bool)
+        marked[[0, 3, 7]] = True
+        refined, parent_cell = refine_marked_triangles_with_parent(
+            domain, marked
+        )
+        child_triangles = mesh_triangles(refined)
+
+        parent_values = np.linspace(0.1, 2.0, parent_triangles.shape[0])
+        parent_inventory = parent_values @ triangle_areas(parent_triangles)
+        child_inventory = (
+            parent_values[parent_cell] @ triangle_areas(child_triangles)
+        )
+        self.assertAlmostEqual(
+            float(parent_inventory), float(child_inventory), places=14
         )
 
 

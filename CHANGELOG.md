@@ -15,6 +15,10 @@ versioning: Semantic Versioning.
   `ConservativeDG1D`, `nonnegative_means` (`dg_transport_1d.py`) and the porosity/Case 4
   residual-minimisation transport (`porosity/transport_1d.py`); private `adaptdg._linear.ReusableLinearProblem`.
   `transport_step` is still a stub (piece 5a).
+- `adaptdg.transport_2d` (`stabilized_transport_2d`: mesh/refinement helpers and the residual-minimisation
+  solver), `adaptdg.transport_dg2d` (`momas2d/transport`: general 2D conservative DG1), `adaptdg.rm_transport`
+  (`momas2d/rm_transport`) and the Darcy RT0-DG0 solver (`momas2d/darcy`) in `adaptdg.flow`, extracted from
+  ASRTM-PHREEQC (commit a152b91); piece 5 is complete.
 
 ## [0.0.1] - unreleased
 

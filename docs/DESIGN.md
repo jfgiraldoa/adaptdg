@@ -15,7 +15,7 @@ package imports without it.
 ## Extraction order
 1. Conservative mesh transfer. **Done** (`transfer`, `transfer_2d` extracted from
    ASRTM-PHREEQC at commit a152b91; `transfer_field` stays a stub).
-2. DG1 transport. 1D part (piece 5a) **done**, see below; 2D part (5b) pending.
+2. DG1 transport. 1D (piece 5a) and 2D/Darcy (piece 5b) **done**, see below. Piece 5 is complete.
 3. Estimators (pending) and Dörfler marking (**marking done**, see below).
 4. ADAP loop.
 
@@ -78,3 +78,54 @@ Extracted from ASRTM-PHREEQC at commit a152b91, numerics and public names unchan
   `nonnegative_means` is covered by direct calls only.
 - Deviation list: only the import lines (to `adaptdg`), `transport_step` stub kept above the copied
   code, and `# noqa: E702` on one source line for ruff.
+
+## Piece 5b: 2D DG1 / residual-minimisation transport and Darcy flow (done; piece 5 complete)
+Extracted from ASRTM-PHREEQC at commit a152b91 (source repo `asrtm-phreeqc-public`), copied, numerics and public names unchanged.
+- `adaptdg.transport_2d` = `src/asrtm_phreeqc/stabilized_transport_2d.py` (mesh helpers
+  `create_rectangle_mesh_2d`, `mesh_triangles`, `create_mesh_from_triangles_2d`, `triangle_characteristic_sizes`,
+  `refine_marked_triangles(_with_parent)`, and `ResidualMinimizationBackwardEuler2D`, `StabilizedTransportStep2D`).
+  Whole file verbatim.
+- `adaptdg.transport_dg2d` = `methods/momas2d/transport.py` (`dispersion_tensor`, `ConservativeDG2D`, the general
+  2D conservative DG1 with tensor dispersion, weighted SIP, vertex limiter).
+- `adaptdg.rm_transport` = `methods/momas2d/rm_transport.py` (`RMStep`, `RMTransportMoMaS2D`). It is a complete
+  solver (the estimator, the Riesz-norm residual indicator, is built into `step`, as in 5a), so it is not in
+  `estimators` (still a stub); it is a sibling of `transport_2d` and generalises `ResidualMinimizationBackwardEuler2D`.
+- `adaptdg.flow`: the real Darcy RT0-DG0 code of `methods/momas2d/darcy.py` (`solve_darcy`, `solve_momas_darcy`,
+  `DarcySolution`, `create_momas_mesh`, `material_tags`, `cell_field`, `momas_facet_tags`, `momas_flux_bc`,
+  `cell_divergence`, `boundary_fluxes`, `interior_facet_flux_mismatch`, `interface_head_jump`, `section_flux`, MoMaS
+  constants) is placed after the unchanged `FlowState` stub; the original module docstring is kept as a comment block.
+- Not copied: front2d monkey patches (fastadap, rm_class_patch, wall_bc, wall_seeds), case drivers, chemistry.
+  Nothing extracted depends on chemistry or on `porosity`. `adaptdg/__init__` and `__all__` unchanged;
+  `import adaptdg` does not load dolfinx (checked: `'dolfinx' in sys.modules` is False); all dolfinx/ufl/basix/petsc4py/mpi4py
+  imports in the sources were already inside functions, so no import line was moved.
+- Duplicates (kept, not merged): no function name occurs in two of the new modules. Conceptual duplicates:
+  `ResidualMinimizationBackwardEuler2D` (transport_2d, scalar D, constant velocity, fixed inlet corners) vs
+  `RMTransportMoMaS2D` (rm_transport, tensor D, RT0 q, inlet facet tags; the latter declares itself a generalisation of the
+  former, with an extra `dt r^2` term in the Riesz norm); `ConservativeDG2D` vs `ConservativeDG1D` (5a) and the
+  case-4 1D classes. `refine_marked_triangles*` and the mesh helpers live only in `transport_2d`; `flow.create_momas_mesh`
+  builds its own mesh with `mesh.create_rectangle`. `nonnegative_means` is imported from `adaptdg.transport` (5a), not copied.
+- Unit/porosity conventions (NOT harmonised). `transport_2d`: no porosity (phi = 1), scalar `diffusion`, constant
+  `velocity` tuple, time in the caller's unit, serial only, inlets on the left (`y >= left_inlet_y_min`) and top
+  (`x <= top_inlet_x_max`) edges, CG1 trial / DG1 test, history degree 0 or 1, BE or BDF2.
+  `transport_dg2d` and `rm_transport`: equation `d_t(phi c) + q.grad c - div(D grad c) = 0`, `q` is the Darcy flux (not divided by
+  phi), `D = a_T|q| I + (a_L - a_T) q q^T/|q|` with `q` the Darcy flux, `phi`, `a_L`, `a_T` per cell (DG0 Function or UFL scalar),
+  concentrations per unit pore volume, no unit factor inside, serial only; `ConservativeDG2D` reports per-step inventory defects.
+  `flow`: `K` is a hydraulic conductivity (q = -K grad h), head `h`, flux boundary `q.n = g` imposed strongly (MoMaS inlets
+  -0.0225, walls 0), Dirichlet head on the outlet; the MoMaS geometry, materials (porosity, K, sites) and tags are module
+  constants (`LX, LY, MATERIALS, WALL, INLET1, ...`), i.e. `flow.py` holds the MoMaS-specific helpers beside the generic `solve_darcy`.
+  No canonical convention is decided here.
+- Deviations from verbatim (all in `transport_dg2d`/`rm_transport`/`flow`/tests): `transport_dg2d` lost the source
+  `SRC = ... parents[2] / "src"; sys.path.insert(...)` block (a path hack tied to the source repo layout) and its `Path`/`sys` imports; the
+  import of `nonnegative_means` now points to `adaptdg.transport`; `rm_transport` imports `dispersion_tensor` from `adaptdg.transport_dg2d`;
+  `flow.py` gained `field` and `numpy` imports at top (FlowState unchanged). Docstrings still mention `asrtm_phreeqc` names in prose.
+- Tests: `test_transfer_2d.py` gets back `test_refined_parent_map_matches_final_local_cell_order` (needs `transport_2d`, guarded with
+  `importorskip("dolfinx")`); new `test_flow_darcy.py` (adapted from `tests/momas2d_rt0_nesting.py`, assertions instead of prints; adds
+  `create_connectivity(1, 2)` so `compute_midpoints` works on dolfinx 0.11) and `test_transport_2d.py` (import laziness, refine, `ConservativeDG2D` balance,
+  `RMTransportMoMaS2D` smoke). Not ported: `tests/test_transport_history_2d.py` (depends on `transport_comparison_2d`, not extracted),
+  `tests/momas2d_anchor_tests.py` (chemistry); `momas2d_rm_mms.py` and `test_efficient_adaptivity_2d.py` do not exist in the source repo.
+- Equality: throwaway script outside the repo, source vs adaptdg, `np.array_equal`, 0 differences on 1053 arrays; the source run twice is also
+  identical (deterministic). Setups: 8 `ResidualMinimizationBackwardEuler2D` configs (rect 8/16/24 and a refined mesh, D 1e-4..1,
+  BE/BDF2, history degree 0/1, 3 steps); mesh/refine on rect 8-24 and two locally refined levels (random marks, parent maps, no-mark case);
+  Darcy on MoMaS meshes k=1,2 (+ k=3 geometry), heterogeneous random K on a k=2 mesh and on a locally refined k=1 mesh;
+  6 `ConservativeDG2D` setups (3 components, positive (0,2)/none, DG0 and constant porosity, aL 1e-4..1e-1, 3 steps with a dt change, `replace_cell_means`)
+  and 12 `RMTransportMoMaS2D` runs (history 0/1, SWIP on/off, 3 steps, `fine_scale`). Limit: serial, dolfinx 0.11 only; the positivity limiter was not forced.
