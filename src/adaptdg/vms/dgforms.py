@@ -122,7 +122,7 @@ class DGForms:
         bnp = ufl.dot(beta("+"), n("+"))
         return (
             v * ufl.dot(beta, ufl.grad(u)) * self.dx
-            + ufl.min_value(bn, 0.0) * v * u * self.ds
+            - ufl.min_value(bn, 0.0) * v * u * self.ds  # inflow term bn (u_D - u) v; u_D is in rhs
             + (0.5 * abs(bnp) * ufl.jump(v) * ufl.jump(u) - ufl.avg(v) * bnp * ufl.jump(u)) * self.dS
         )
 

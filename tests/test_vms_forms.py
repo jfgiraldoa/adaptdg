@@ -67,3 +67,17 @@ def test_uniform_refinement_rates_on_smooth_solution(p, beta):
     kw = {"span": 1e9}
     assert fitted_slope(hist, "Vh", 2, **kw) == pytest.approx(-p, abs=0.35)
     assert fitted_slope(hist, "L2", 2, **kw) == pytest.approx(-(p + 1), abs=0.45)
+
+
+@pytest.mark.parametrize("p", [1, 2])
+def test_inflow_dirichlet_data_is_consistent_with_advection(p):
+    """Regression: the weak inflow boundary term bn (u_D - u) v must make the exact solution consistent."""
+
+    class Shifted(Smooth):
+        def exact(self, x):
+            return 1.0 + ufl.sin(2 * x[0]) * ufl.cos(x[1])
+
+    settings = LoopSettings(p=p, refinement="uniform", max_levels=4, initial_mesh_size=2)
+    hist = AdaptiveStationaryLoop(Shifted((1.0, 0.5)), settings).run(progress=None)
+    assert fitted_slope(hist, "Vh", 2, span=1e9) == pytest.approx(-p, abs=0.35)  # was about -0.5
+    assert fitted_slope(hist, "L2", 2, span=1e9) == pytest.approx(-(p + 1), abs=0.45)  # was about -1.5

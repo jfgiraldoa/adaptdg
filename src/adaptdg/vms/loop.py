@@ -30,6 +30,8 @@ class LoopSettings:
     quadrature_degree: int = 12
     refinement: str = "adaptive"  # "adaptive" | "uniform"
     initial_mesh_size: int = 4
+    reconstruct: bool = False  # add the errors of theta, u = ubar + utilde and phi to each row
+    adjoint_ordering: str = "paper"  # "paper" b(eps', v) | "legacy" b(v, eps')
 
 
 def mark_cells(indicators: np.ndarray, theta: float, tolref: float) -> np.ndarray:
@@ -50,9 +52,11 @@ class AdaptiveStationaryLoop:
         self.domain = domain if domain is not None else problem.initial_mesh(settings.initial_mesh_size)
         self.history: list[dict[str, float]] = []
         self.result: Any = None
+        self.vms: Any = None  # VMSResult of the last level when ``settings.reconstruct``
 
     def run(self, progress: Callable[[str], None] | None = print) -> list[dict[str, float]]:
-        from adaptdg.vms.norms import error_norms
+        from adaptdg.vms.norms import error_norms, error_norms_vms
+        from adaptdg.vms.reconstruction import reconstruct
         from adaptdg.vms.refine import refine_marked, refine_uniform
         from adaptdg.vms.saddle import RMSolver
 
@@ -65,11 +69,18 @@ class AdaptiveStationaryLoop:
             self.result = res = solver.solve(self.domain)
             ncells = self.domain.topology.index_map(self.domain.topology.dim).size_local
             l2, vh = error_norms(res, self.problem, s.p, degree=s.quadrature_degree)
-            self.history.append({"level": level, "ndofs": res.ndofs, "ncells": int(ncells),
-                                 "E": res.E, "L2": l2, "Vh": vh, "time": time.time() - t0})
+            row = {"level": level, "ndofs": res.ndofs, "ncells": int(ncells),
+                   "E": res.E, "L2": l2, "Vh": vh}
+            if s.reconstruct:
+                self.vms = reconstruct(res, adjoint_ordering=s.adjoint_ordering, solver=s.solver)
+                errs = error_norms_vms(res, self.vms, self.problem, s.p, degree=s.quadrature_degree)
+                for name in ("theta", "u", "phi"):
+                    row[f"L2_{name}"], row[f"Vh_{name}"] = errs[name]
+            self.history.append({**row, "time": time.time() - t0})
             if progress:
+                extra = f" Vh_phi={row['Vh_phi']:.3e}" if s.reconstruct else ""
                 progress(f"level {level + 1}/{s.max_levels} p={s.p} ndofs={res.ndofs} "
-                         f"E={res.E:.3e} L2={l2:.3e} Vh={vh:.3e} t={time.time() - t0:.1f}s")
+                         f"E={res.E:.3e} L2={l2:.3e} Vh={vh:.3e}{extra} t={time.time() - t0:.1f}s")
             if (level + 1 == s.max_levels or res.E <= s.tol
                     or (s.dofmax is not None and res.ndofs >= s.dofmax)):
                 break
