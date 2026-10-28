@@ -27,3 +27,8 @@ testpaths = ["tests"]
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Pin the rule set so results do not change with the ruff version (CI installs the latest).
+# Copied research code is kept verbatim, so only correctness rules are enforced.
+select = ["E4", "E7", "E9", "F"]
