@@ -222,9 +222,85 @@ class Anisotropic(Problem):
         return crossed_rectangle(n, (-1.0, -0.5), (1.0, 0.5), comm)
 
 
+def _box_markers(dim: int) -> dict[int, Marker]:
+    """Tags 1..2 dim on the faces x_i = 0, x_i = 1 (i = 0, 1, (2)) of the unit square / cube."""
+    markers: dict[int, Marker] = {}
+    for i in range(dim):
+        for j, val in enumerate((0.0, 1.0)):
+            markers[2 * i + j + 1] = lambda x, i=i, val=val: np.isclose(x[i], val)
+    return markers
+
+
+@dataclass
+class ErikssonJohnson(Problem):
+    """Steady Eriksson-Johnson problem ``-kappa Delta u + beta . grad u = 0`` on the unit square.
+
+    ``beta = (1, 0)``, ``f = 0`` and Dirichlet data on the four sides (tags 1-4: ``x = 0, 1``, ``y = 0, 1``) from
+    the exact solution ``u = (exp(r1 (x-1)) - exp(r2 (x-1)))/(exp(-r1) - exp(-r2)) sin(pi y)`` with
+    ``r1,2 = (1 +- sqrt(1 + 4 pi^2 kappa^2))/(2 kappa)``: a boundary layer of width ``1/r1 ~ kappa`` at the outflow
+    ``x = 1`` (paper section 5.6; legacy ``ErikssonJhonsson``, default ``kappa = 1e-2``).
+    """
+
+    diffusivity: float = 1.0e-2
+    velocity: tuple[float, ...] = (1.0, 0.0)
+    name = "eriksson_johnson"
+    dim = 2
+    dirichlet_tags: tuple[int, ...] = (1, 2, 3, 4)
+
+    def roots(self) -> tuple[float, float]:
+        """``(r1, r2)``; ``r2`` uses the cancellation-free form ``-2 pi^2 kappa/(1 + sqrt(...))``."""
+        k = float(self.diffusivity)
+        root = float(np.sqrt(1 + 4 * np.pi**2 * k**2))
+        return (1 + root) / (2 * k), -2 * np.pi**2 * k / (1 + root)
+
+    def kappa(self, x: Any) -> Any:
+        return float(self.diffusivity)
+
+    def beta(self, x: Any) -> Any | None:
+        import ufl
+
+        return ufl.as_vector([float(v) for v in self.velocity])
+
+    def exact(self, x: Any) -> Any:
+        import ufl
+
+        r1, r2 = self.roots()
+        layer = (ufl.exp(r1 * (x[0] - 1)) - ufl.exp(r2 * (x[0] - 1))) / (np.exp(-r1) - np.exp(-r2))
+        return layer * ufl.sin(ufl.pi * x[1])
+
+    def source(self, x: Any) -> Any | None:
+        return None  # f = 0
+
+    def boundary_markers(self) -> dict[int, Marker]:
+        return _box_markers(self.dim)
+
+    def initial_mesh(self, n: int, comm: Any = None) -> Any:
+        from adaptdg.vms.meshes import crossed_rectangle
+
+        return crossed_rectangle(n, (0.0, 0.0), (1.0, 1.0), comm)
+
+
+@dataclass
+class ErikssonJohnson3D(ErikssonJohnson):
+    """3D version on the unit cube (paper section 5.6): ``beta = (1, 0, 0)``, same exact solution (independent
+    of ``z``), Dirichlet data on the six faces (tags 1-6). The legacy code only ran the 2D problem."""
+
+    velocity: tuple[float, ...] = (1.0, 0.0, 0.0)
+    name = "eriksson_johnson_3d"
+    dim = 3
+    dirichlet_tags: tuple[int, ...] = (1, 2, 3, 4, 5, 6)
+
+    def initial_mesh(self, n: int, comm: Any = None) -> Any:
+        from adaptdg.vms.meshes import unit_cube
+
+        return unit_cube(n, comm)
+
+
 PROBLEMS: dict[str, type[Problem]] = {
     "reentrant_corner": ReentrantCorner,
     "fichera": Fichera3D,
     "heterogeneous": Heterogeneous,
     "anisotropic": Anisotropic,
+    "eriksson_johnson": ErikssonJohnson,
+    "eriksson_johnson_3d": ErikssonJohnson3D,
 }

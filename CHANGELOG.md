@@ -6,6 +6,9 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `adaptdg.vms`: the steady Eriksson-Johnson problem (`ErikssonJohnson`, `ErikssonJohnson3D`, `meshes.unit_cube`) and the example
+  `examples/vms/eriksson_johnson` (paper section 5.6) with `paper` and `legacy` presets, both error targets, adaptive and
+  uniform refinement, two diffusivities and a 3D option.
 - `adaptdg.vms`: the Fichera 3D example `examples/vms/fichera_3d` (paper section 5.3) with `paper` and `legacy` presets, both
   error targets, adaptive and uniform refinement, cell-size statistics and plots; `problem.json` accepts the key `q`.
 - `adaptdg.vms`: every VMS run can use the choices of the original implementation (`"preset": "legacy"` in

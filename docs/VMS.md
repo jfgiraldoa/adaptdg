@@ -81,10 +81,22 @@ refinement is suboptimal (Vh about -(q + 1/2)). `reconstruct` (theta, u, phi) wo
 (p = 1) and 2.5 GB at 1e5 DoF (p = 2). The legacy test used marking ratio 0.125 in 3D, whereas the `legacy` preset has the 2D
 value 0.25: the example sets `"preset_overrides": {"marking_ratio": 0.125}`.
 
+## Eriksson-Johnson (steady)
+
+`ErikssonJohnson` (section 5.6, legacy `ErikssonJhonsson`, steady branch): `-kappa Delta u + (1, 0) . grad u = 0` on the unit
+square, `kappa = 1e-2` by default, Dirichlet data on the four sides (tags 1-4) from
+`u = (exp(r1 (x-1)) - exp(r2 (x-1)))/(exp(-r1) - exp(-r2)) sin(pi y)`, `r1,2 = (1 +- sqrt(1 + 4 pi^2 kappa^2))/(2 kappa)`
+(`f = 0`; boundary layer of width about `kappa` at `x = 1`). `ErikssonJohnson3D` is the 3D version of the paper on the unit
+cube (`beta = (1, 0, 0)`, same solution, six faces); the original code only ran the 2D case. Registry names
+`"eriksson_johnson"` and `"eriksson_johnson_3d"`, `meshes.unit_cube(n)`. See `examples/vms/eriksson_johnson/` (short and
+`--full` runs, both presets, both error targets, adaptive and uniform; `--dim 3`). Measured (about 22k DoF, kappa = 1e-2,
+paper preset): the mean cell size away from the layer is 12 times that in `x > 0.9`; the last-window Vh slope is about
+-1.3 (p = 1) and -2.2 (p = 2) against DoF^(1/2); at kappa = 1e-3 the uniform sequences do not resolve the layer.
+
 ## Modules
 
-`problems` (`Problem`, `ReentrantCorner`, `Fichera3D`, `Heterogeneous`, `Anisotropic`), `meshes` (crossed-triangle L-shape,
-Fichera cube, boundary tags), `dgforms`, `saddle` (`RMSolver`, `RMResult`), `refine`
+`problems` (`Problem`, `ReentrantCorner`, `Fichera3D`, `Heterogeneous`, `Anisotropic`, `ErikssonJohnson`,
+`ErikssonJohnson3D`), `meshes` (crossed-triangle L-shape, Fichera cube, unit cube, boundary tags), `dgforms`, `saddle` (`RMSolver`, `RMResult`), `refine`
 (`refine_marked`, `refine_uniform`, any dimension), `norms` (`error_targets`, `error_norms`, `error_norms_vms`), `preset` (`Preset`, `resolve_preset`), `reconstruction` (`reconstruct`, `VMSResult`), `loop`
 (`AdaptiveStationaryLoop`, `LoopSettings`, `fitted_slope`) and `run` (`run_from_json`).
 

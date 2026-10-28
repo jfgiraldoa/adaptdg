@@ -1,0 +1,27 @@
+{
+  "p": 1,
+  "tolref": 0.2,
+  "eta_0": 1.0,
+  "max_levels": 60,
+  "dofmax": 6000,
+  "tol": 0.0,
+  "solver": "mumps",
+  "quadrature_degree": 12,
+  "refinement": "adaptive",
+  "reconstruct": true,
+  "preset": "paper",
+  "error_targets": "both",
+  "example": {
+    "degrees": {"short": [1, 2], "full": [1, 2, 3]},
+    "dofmax": {"short": {"1": 6000, "2": 12000}, "full": {"1": 60000, "2": 120000, "3": 150000}},
+    "dofmax_3d": {"short": {"1": 20000}, "full": {"1": 100000}},
+    "presets": {
+      "paper": {"theta_ref": 0.25},
+      "legacy": {}
+    },
+    "presets_3d": {
+      "paper": {"theta_ref": 0.125},
+      "legacy": {"preset_overrides": {"marking_ratio": 0.125}}
+    }
+  }
+}

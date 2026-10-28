@@ -48,6 +48,13 @@ def crossed_rectangle(n: int, lo: tuple[float, float], hi: tuple[float, float],
     )
 
 
+def unit_cube(n: int, comm: Any = None) -> Any:
+    """Unit cube split into ``n^3`` cubes of six tetrahedra each."""
+    from dolfinx import mesh
+
+    return mesh.create_unit_cube(_comm(comm), n, n, n, mesh.CellType.tetrahedron)
+
+
 def l_shape(n: int, comm: Any = None) -> Any:
     """(-1,1)^2 minus the quadrant x>0, y<0; ``n`` (even) cells per side before the cut."""
     if n % 2:
