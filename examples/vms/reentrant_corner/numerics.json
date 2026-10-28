@@ -1,0 +1,12 @@
+{
+  "p": 1,
+  "theta_ref": 0.25,
+  "tolref": 0.2,
+  "eta_0": 1.0,
+  "max_levels": 60,
+  "dofmax": 10000,
+  "tol": 0.0,
+  "solver": "mumps",
+  "quadrature_degree": 12,
+  "refinement": "adaptive"
+}

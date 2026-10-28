@@ -6,6 +6,10 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `adaptdg.vms` (pieces 1-3): stationary adaptive residual-minimisation solver for scalar diffusion-advection problems
+  (Giraldo & Calo 2023, CMAME 417, 116285): `problems`, `meshes` (L-shape, Fichera), `dgforms` (SWIP/upwind forms, Gram norm),
+  `saddle` (`RMSolver`, DG(p) x CG(p), any p, 2D/3D), `refine`, `norms`, `loop` and the JSON loader `run`; example
+  `examples/vms/reentrant_corner/` and `docs/VMS.md`. dolfinx imports are lazy.
 - `adaptdg.case4` subpackage (piece 9): Case 4 (evolving porosity, Xie B2) transport and ADAP modules extracted from
   ASRTM-PHREEQC (asrtm-phreeqc-public @ a152b91, `methods/case4dev/` and `porosity/{dg_1d,coupling}.py`): `adap_persistent`,
   `adap_fast`, `adap_asfem`, `transport_bdf2`, `dg_history`, `positivity`, `variable_dt`, `coarse_transport`, `fv_transport`
