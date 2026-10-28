@@ -2,7 +2,9 @@
 
 Marking is the Doerfler rule of the paper (``adaptdg.marking.dorfler_union`` with all cells
 eligible) on the indicators ``g_K`` of :mod:`adaptdg.vms.saddle`; theta_ref defaults to 0.25
-(2D) and 0.125 (3D), the tie tolerance to 0.2.
+(2D) and 0.125 (3D), the tie tolerance to 0.2. ``settings.preset = "legacy"`` switches to the choices
+of the original implementation (:mod:`adaptdg.vms.preset`), among them fixed-fraction marking.
+Errors are reported against the exact solution and against its DG(p) L2 projection.
 """
 
 from __future__ import annotations
@@ -32,6 +34,9 @@ class LoopSettings:
     initial_mesh_size: int = 4
     reconstruct: bool = False  # add the errors of theta, u = ubar + utilde and phi to each row
     adjoint_ordering: str = "paper"  # "paper" b(eps', v) | "legacy" b(v, eps')
+    preset: Any = "paper"  # "paper" | "legacy" | Preset (see adaptdg.vms.preset)
+    preset_overrides: dict[str, Any] | None = None  # Preset fields to change, e.g. {"gram_l2": True}
+    error_targets: str = "both"  # "both" | "exact": "both" adds the *_proj columns (L2 projection of u_exact)
 
 
 def mark_cells(indicators: np.ndarray, theta: float, tolref: float) -> np.ndarray:
@@ -55,27 +60,35 @@ class AdaptiveStationaryLoop:
         self.vms: Any = None  # VMSResult of the last level when ``settings.reconstruct``
 
     def run(self, progress: Callable[[str], None] | None = print) -> list[dict[str, float]]:
-        from adaptdg.vms.norms import error_norms, error_norms_vms
+        from adaptdg.marking import fixed_fraction_bands
+        from adaptdg.vms.norms import error_targets, history_columns
+        from adaptdg.vms.preset import resolve_preset
         from adaptdg.vms.reconstruction import reconstruct
         from adaptdg.vms.refine import refine_marked, refine_uniform
         from adaptdg.vms.saddle import RMSolver
 
         s = self.settings
         theta = s.theta_ref if s.theta_ref is not None else (0.25 if self.problem.dim == 2 else 0.125)
-        solver = RMSolver(self.problem, s.p, eta0=s.eta0, quadrature_degree=s.quadrature_degree,
-                          solver=s.solver)
+        if s.error_targets not in ("both", "exact"):
+            raise ValueError("error_targets must be 'both' or 'exact'")
+        preset = resolve_preset(s.preset, **(s.preset_overrides or {}))
+        qdeg = s.quadrature_degree if preset.quadrature_degree is None else preset.quadrature_degree
+        ordering = s.adjoint_ordering if preset.adjoint_ordering is None else preset.adjoint_ordering
+        ratio = theta if preset.marking_ratio is None else preset.marking_ratio
+        targets = ("exact", "projection") if s.error_targets == "both" else ("exact",)
+        solver = RMSolver(self.problem, s.p, eta0=s.eta0, quadrature_degree=qdeg,
+                          solver=s.solver, preset=preset)
         for level in range(s.max_levels):
             t0 = time.time()
             self.result = res = solver.solve(self.domain)
             ncells = self.domain.topology.index_map(self.domain.topology.dim).size_local
-            l2, vh = error_norms(res, self.problem, s.p, degree=s.quadrature_degree)
-            row = {"level": level, "ndofs": res.ndofs, "ncells": int(ncells),
-                   "E": res.E, "L2": l2, "Vh": vh}
             if s.reconstruct:
-                self.vms = reconstruct(res, adjoint_ordering=s.adjoint_ordering, solver=s.solver)
-                errs = error_norms_vms(res, self.vms, self.problem, s.p, degree=s.quadrature_degree)
-                for name in ("theta", "u", "phi"):
-                    row[f"L2_{name}"], row[f"Vh_{name}"] = errs[name]
+                self.vms = reconstruct(res, adjoint_ordering=ordering, solver=s.solver)
+            errs = error_targets(res, self.problem, s.p, degree=qdeg,
+                                 vms=self.vms if s.reconstruct else None, targets=targets)
+            cols = history_columns(errs)
+            l2, vh = cols["L2"], cols["Vh"]
+            row = {"level": level, "ndofs": res.ndofs, "ncells": int(ncells), "E": res.E, **cols}
             self.history.append({**row, "time": time.time() - t0})
             if progress:
                 extra = f" Vh_phi={row['Vh_phi']:.3e}" if s.reconstruct else ""
@@ -87,7 +100,11 @@ class AdaptiveStationaryLoop:
             if s.refinement == "uniform":
                 self.domain = refine_uniform(self.domain)
             else:
-                self.domain = refine_marked(self.domain, mark_cells(res.indicators, theta, s.tolref))[0]
+                if preset.marking == "fixed_fraction":
+                    marked = fixed_fraction_bands(res.indicators, ratio)
+                else:
+                    marked = mark_cells(res.indicators, theta, s.tolref)
+                self.domain = refine_marked(self.domain, marked)[0]
         return self.history
 
 

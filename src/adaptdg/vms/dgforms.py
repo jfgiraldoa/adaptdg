@@ -51,15 +51,18 @@ class DGForms:
 
     ``b(v, u)`` has the test function first, as in the paper, so the saddle-point system of
     eq. (18) reads ``gram(w, r) + b(w, u) + b(r, v)``. ``rhs_degree`` is the quadrature degree of
-    the (possibly non-polynomial) data in :meth:`rhs`.
+    the (possibly non-polynomial) data in :meth:`rhs`. ``preset`` (:class:`~adaptdg.vms.preset.Preset`,
+    its name or ``None`` = paper) switches the Gram L2 term and the interior penalty factors.
     """
 
     def __init__(self, domain: Any, problem: Any, p: int, *, eta0: float = 1.0,
-                 degree: int | None = None, rhs_degree: int = 8) -> None:
+                 degree: int | None = None, rhs_degree: int = 8, preset: Any = None) -> None:
         import ufl
         from adaptdg.vms.meshes import tag_boundary
+        from adaptdg.vms.preset import resolve_preset
 
         self.domain, self.problem, self.p = domain, problem, p
+        self.preset = resolve_preset(preset)
         self.n = ufl.FacetNormal(domain)
         self.x = ufl.SpatialCoordinate(domain)
         self.eta = penalty_field(domain, p, eta0)
@@ -101,6 +104,7 @@ class DGForms:
         n, eta = self.n, self.eta
         gv, gu = ufl.grad(v), ufl.grad(u)
         _, _, gam = self._interior_weights()
+        gam = gam * self.preset.gamma_factor_b
         gam_b = _normal_kappa(self.kappa, n)
         jv, ju = ufl.jump(v, n), ufl.jump(u, n)
         form = (
@@ -151,13 +155,15 @@ class DGForms:
         wc = 1.0 if weight is None else weight
         wf = 1.0 if weight is None else ufl.avg(weight)
         _, _, gam = self._interior_weights()
+        gam = gam * self.preset.gamma_factor_gram
         gam_b = _normal_kappa(self.kappa, n)
         form = (
             ufl.inner(ufl.grad(a), _flux(self.kappa, ufl.grad(c))) * wc * self.dx
             + ufl.avg(eta) * gam * ufl.inner(ufl.jump(a, n), ufl.jump(c, n)) * wf * self.dS
             + eta * gam_b * a * c * wc * self.ds
-            + a * c * wc * self.dx
         )
+        if self.preset.gram_l2 or self.beta is not None:  # legacy beta_inf = 1 gives the L2 term
+            form += a * c * wc * self.dx
         if self.beta is not None:
             beta, bn = self.beta, ufl.dot(self.beta, n)
             bnp = ufl.dot(beta("+"), n("+"))

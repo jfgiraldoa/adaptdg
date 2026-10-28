@@ -31,8 +31,9 @@ class RMSolver:
     """Linear stationary residual-minimisation solver (any p, 2D and 3D)."""
 
     def __init__(self, problem: Any, p: int, *, eta0: float = 1.0,
-                 quadrature_degree: int = 12, solver: str = "mumps") -> None:
+                 quadrature_degree: int = 12, solver: str = "mumps", preset: Any = None) -> None:
         self.problem, self.p, self.eta0 = problem, p, eta0
+        self.preset = preset
         self.quadrature_degree, self.solver = quadrature_degree, solver
 
     def system(self, domain: Any) -> tuple[Any, Any, Any, DGForms]:
@@ -42,7 +43,8 @@ class RMSolver:
         from dolfinx import fem
 
         p = self.p
-        forms = DGForms(domain, self.problem, p, eta0=self.eta0, rhs_degree=self.quadrature_degree)
+        forms = DGForms(domain, self.problem, p, eta0=self.eta0, rhs_degree=self.quadrature_degree,
+                         preset=self.preset)
         cell = domain.basix_cell()
         element = basix.ufl.mixed_element(
             [basix.ufl.element("DG", cell, p), basix.ufl.element("Lagrange", cell, p)]

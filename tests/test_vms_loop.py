@@ -65,5 +65,5 @@ def test_run_from_json_writes_csv_and_mesh(tmp_path):
                         progress=None)
     assert out["csv"].exists() and out["mesh"].exists()
     header = out["csv"].read_text().splitlines()[0]
-    assert header == "level,ndofs,ncells,E,L2,Vh,time"
+    assert header == "level,ndofs,ncells,E,L2,Vh,L2_proj,Vh_proj,time"
     assert len(out["history"]) == 5 and "E" in out["slopes"]

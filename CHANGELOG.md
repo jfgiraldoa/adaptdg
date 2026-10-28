@@ -6,6 +6,11 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `adaptdg.vms`: every VMS run can use the choices of the original implementation (`"preset": "legacy"` in
+  `numerics.json`; default `"paper"` is unchanged) and reports the errors of `ubar`, `theta` and `phi` against both the
+  exact solution and its DG(p) L2 projection (new `*_proj` history columns). Individual differences are switchable
+  (`"preset_overrides"`), `adaptdg.marking.fixed_fraction_bands` implements the legacy marking, and the example
+  `examples/vms/compare_presets` compares both presets. See "Legacy and paper presets" in `docs/VMS.md`.
 - `adaptdg.vms`: stationary adaptive residual-minimisation solver for scalar diffusion-advection problems in 2D and 3D
   (Giraldo & Calo 2023, CMAME 417, 116285): problems, meshes (L-shape, Fichera), SWIP/upwind DG forms with the Gram
   norm, the DG(p) x CG(p) saddle-point solver (any p), refinement, error norms, the adaptive loop and a JSON-driven
@@ -22,6 +27,10 @@ versioning: Semantic Versioning.
   `adaptdg.loop_momas` and `adaptdg.coupled_momas`; persistent-mesh policy in `adaptdg.mesh`.
 - `adaptdg.case4`: Case 4 (evolving porosity) transport and adaptive modules, with no chemistry import.
 - `CITATION.cff`, project URLs and keywords in `pyproject.toml`.
+
+### Changed
+- `adaptdg.vms`: the loop history has two extra columns, `L2_proj` and `Vh_proj` (and `*_proj` for `theta`, `u`, `phi`
+  with `reconstruct`); set `error_targets = "exact"` to keep the previous columns only. Existing values are unchanged.
 
 ### Fixed
 - `adaptdg.vms.dgforms`: the weak inflow boundary term of the upwind advection form had the wrong sign (inconsistent

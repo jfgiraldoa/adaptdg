@@ -65,9 +65,11 @@ def test_phi_improves_l2_and_keeps_vh_close_to_dg():
 
 
 def test_history_columns_depend_on_reconstruct_flag():
-    off = AdaptiveStationaryLoop(ReentrantCorner(), LoopSettings(max_levels=2)).run(progress=None)
+    off = AdaptiveStationaryLoop(ReentrantCorner(), LoopSettings(max_levels=2, error_targets="exact")).run(progress=None)
     assert list(off[0]) == ["level", "ndofs", "ncells", "E", "L2", "Vh", "time"]
-    on = AdaptiveStationaryLoop(ReentrantCorner(), LoopSettings(max_levels=2, reconstruct=True))
+    default = AdaptiveStationaryLoop(ReentrantCorner(), LoopSettings(max_levels=1)).run(progress=None)
+    assert list(default[0]) == ["level", "ndofs", "ncells", "E", "L2", "Vh", "L2_proj", "Vh_proj", "time"]
+    on = AdaptiveStationaryLoop(ReentrantCorner(), LoopSettings(max_levels=2, reconstruct=True, error_targets="exact"))
     rows = on.run(progress=None)
     extra = ["L2_theta", "Vh_theta", "L2_u", "Vh_u", "L2_phi", "Vh_phi"]
     assert list(rows[0]) == ["level", "ndofs", "ncells", "E", "L2", "Vh", *extra, "time"]

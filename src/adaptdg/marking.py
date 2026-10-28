@@ -228,3 +228,34 @@ def dorfler_with_ties(squared, *, fraction, tie, eligible):
     threshold = (1.0 - tie) ** 2 * values[order[stop]]
     marked[order[values[order] >= threshold]] = True
     return marked
+
+
+def fixed_fraction_bands(
+    indicators: np.ndarray,
+    ratio: float = 0.25,
+    *,
+    frac: float = 0.95,
+    delfrac: float = 0.05,
+) -> np.ndarray:
+    """Fixed-fraction marking by bands of the maximum indicator (legacy ASFEM ``REF_TYPE 2``).
+
+    Starting at ``frac`` and lowering it by ``delfrac`` each step, the not yet marked cells with
+    ``|indicator| > frac * max`` are marked, until the marked indicators add up to at least
+    ``ratio * total`` (``ratio`` is applied to the sum of the squared indicators, not squared
+    itself, unlike the Dörfler parameter). Returns a boolean mask; all False if the total is zero.
+    """
+    values = np.abs(np.asarray(indicators, dtype=np.float64))
+    marked = np.zeros(values.shape, dtype=bool)
+    total = float(values.sum())
+    if total <= 0.0:
+        return marked
+    if not 0.0 < ratio <= 1.0 or delfrac <= 0.0:
+        raise ValueError("ratio must lie in (0, 1] and delfrac must be positive")
+    top = float(values.max())
+    accumulated = 0.0
+    while accumulated < ratio * total and not marked.all():
+        new = ~marked & (values > frac * top)
+        accumulated += float(values[new].sum())
+        marked |= new
+        frac -= delfrac
+    return marked
