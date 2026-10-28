@@ -6,6 +6,7 @@ Extracted unchanged from ASRTM-PHREEQC (src/asrtm_phreeqc/transfer_2d.py).
 from __future__ import annotations
 
 from collections import OrderedDict
+from contextlib import contextmanager
 from dataclasses import dataclass
 from hashlib import blake2b
 
@@ -21,6 +22,8 @@ _PLAN_CACHE: OrderedDict[tuple[object, ...], "ConservativeRemapPlan2D"] = (
 _PLAN_CACHE_BYTES = 0
 _PLAN_CACHE_HITS = 0
 _PLAN_CACHE_MISSES = 0
+# Optional plan builder (``adaptdg.fastadap``), selected with :func:`use_plan_builder`; None: ``create``.
+_PLAN_BUILDER = None
 
 
 def _edges(values: ArrayLike, name: str) -> NDArray[np.float64]:
@@ -249,6 +252,24 @@ class ConservativeRemapPlan2D:
         return target.reshape(array.shape[:-1] + (self.ny, self.nx))
 
 
+@contextmanager
+def use_plan_builder(builder):
+    """Build the plans of :func:`conservative_remap_plan_2d` with ``builder(cls, triangles,
+    x_edges, y_edges, require_rectangle_coverage=...)`` instead of ``ConservativeRemapPlan2D.create``
+    inside the block (``None``: the default). The plan cache is cleared on entry and exit, so
+    plans of the two builders are never mixed."""
+
+    global _PLAN_BUILDER
+    previous = _PLAN_BUILDER
+    clear_transfer_plan_cache()
+    _PLAN_BUILDER = builder
+    try:
+        yield
+    finally:
+        _PLAN_BUILDER = previous
+        clear_transfer_plan_cache()
+
+
 def _plan_key(
     triangles: NDArray[np.float64],
     x_edges: NDArray[np.float64],
@@ -286,12 +307,21 @@ def conservative_remap_plan_2d(
         _PLAN_CACHE_HITS += 1
         return cached
     _PLAN_CACHE_MISSES += 1
-    plan = ConservativeRemapPlan2D.create(
-        tri,
-        x,
-        y,
-        require_rectangle_coverage=require_rectangle_coverage,
-    )
+    if _PLAN_BUILDER is None:
+        plan = ConservativeRemapPlan2D.create(
+            tri,
+            x,
+            y,
+            require_rectangle_coverage=require_rectangle_coverage,
+        )
+    else:
+        plan = _PLAN_BUILDER(
+            ConservativeRemapPlan2D,
+            tri,
+            x,
+            y,
+            require_rectangle_coverage=require_rectangle_coverage,
+        )
     _PLAN_CACHE[key] = plan
     _PLAN_CACHE_BYTES += plan.memory_bytes
     while (

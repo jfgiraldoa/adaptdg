@@ -6,6 +6,11 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- History-preserving mesh rebuild (F2A) and fast path of the 2D adaptive loop: `run_adaptive_loop_2d(...,
+  history_policy="f2a", fast=True)` keeps the DG1 reaction history across predictive-mesh rebuilds and in-step
+  refinements (new modules `adaptdg.f2a`, `adaptdg.history_projection`, `adaptdg.history_projection_fast`,
+  `adaptdg.fastadap`; `adaptdg.transfer_2d.use_plan_builder`). Defaults are unchanged; `AdaptiveRun2D.statistics`
+  reports the counters.
 - `adaptdg.vms.galerkin`: standard CG(p) Galerkin baseline (`solve_galerkin`, `galerkin_errors`) with the same problems, meshes
   and error targets; `LoopSettings.method` (`"rm"` | `"galerkin"`) and `compare_galerkin`; the problem `PoissonSine` and the
   example `examples/vms/poisson_fem` (Galerkin versus residual minimisation on the re-entrant corner).

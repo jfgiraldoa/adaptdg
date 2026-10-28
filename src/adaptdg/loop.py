@@ -23,6 +23,13 @@ import warnings
 
 import numpy as np
 
+from adaptdg.f2a import F2AHistory, F2AOptions
+from adaptdg.fastadap import (
+    FastOptions,
+    FastPath,
+    fast_mesh_triangles,
+    fast_refine_marked_triangles_with_parent,
+)
 from adaptdg.flow import FlowState
 from adaptdg.marking import dorfler_union_2d
 from adaptdg.mesh import (
@@ -39,6 +46,7 @@ from adaptdg.transfer_2d import (
     transfer_plan_cache_info,
     triangle_areas,
     triangles_to_rectangles,
+    use_plan_builder,
 )
 from adaptdg.transport_2d import (
     ResidualMinimizationBackwardEuler2D,
@@ -186,6 +194,8 @@ class AdaptiveRun2D:
     chemistry_x_edges: np.ndarray
     chemistry_y_edges: np.ndarray
     boundary_concentrations: dict[str, float]
+    # Statistics of the history-preserving rebuild (F2A) and of the fast path, if used.
+    statistics: dict[str, dict] | None = None
 
 
 def _dorfler_union_2d(
@@ -301,6 +311,8 @@ def solve_one_adaptive_transport_step_2d(
     history_degree: int = 0,
     previous_history_cell_values: dict[str, np.ndarray] | None = None,
     older_history_cell_values: dict[str, np.ndarray] | None = None,
+    f2a_history: F2AHistory | None = None,
+    fast: FastPath | None = None,
 ) -> tuple[
     object,
     dict[str, StabilizedTransportStep2D],
@@ -352,6 +364,18 @@ def solve_one_adaptive_transport_step_2d(
         raise ValueError("BDF2 requires older_chemistry")
     if time_scheme == "backward_euler" and older_chemistry is not None:
         raise ValueError("Backward Euler accepts no older_chemistry")
+
+    # F2A (P2): children of an in-step refinement inherit the exact restriction of the parent
+    # DG1 history. Fast path: solver cache, vectorised mesh helpers (see adaptdg.fastadap).
+    make_solver = (
+        ResidualMinimizationBackwardEuler2D if fast is None else fast.solver_factory
+    )
+    triangles_of = mesh_triangles if fast is None else fast_mesh_triangles
+    refine_with_parent = (
+        refine_marked_triangles_with_parent
+        if fast is None
+        else fast_refine_marked_triangles_with_parent
+    )
 
     timings = {
         "transport_mesh_creation": 0.0,
@@ -438,7 +462,7 @@ def solve_one_adaptive_transport_step_2d(
 
     for refinement_level in range(maximum_solves):
         started = perf_counter()
-        solver = ResidualMinimizationBackwardEuler2D(
+        solver = make_solver(
             domain=domain,
             lower=lower,
             upper=upper,
@@ -517,6 +541,9 @@ def solve_one_adaptive_transport_step_2d(
             timings["chemistry_to_transport_transfer"] += perf_counter() - started
         transport_results = {}
         started = perf_counter()
+        begin_batch = getattr(solver, "begin_batch", None)
+        if f2a_history is not None and begin_batch is not None:
+            begin_batch(current_complete_history, older_complete_history, boundary)
         for component_index, name in enumerate(components):
             complete_current = (
                 None
@@ -677,14 +704,12 @@ def solve_one_adaptive_transport_step_2d(
             break
         started = perf_counter()
         if nested_previous_transfer or incremental_exact_previous_transfer:
-            refined_domain, parent_cell = refine_marked_triangles_with_parent(
-                domain, marked
-            )
+            refined_domain, parent_cell = refine_with_parent(domain, marked)
         else:
             refined_domain = refine_marked_triangles(domain, marked)
             parent_cell = None
         timings["mesh_refinement"] += perf_counter() - started
-        if mesh_triangles(refined_domain).shape[0] == triangles.shape[0]:
+        if triangles_of(refined_domain).shape[0] == triangles.shape[0]:
             if snapshot_levels and not snapshot_retained:
                 started = perf_counter()
                 retain_snapshot(
@@ -695,8 +720,9 @@ def solve_one_adaptive_transport_step_2d(
                 )
                 timings["snapshot_copy"] += perf_counter() - started
             break
+        f2a_restricted = False
         if full_exact_previous_transfer:
-            child_triangles = mesh_triangles(refined_domain)
+            child_triangles = triangles_of(refined_domain)
             started = perf_counter()
             final_plan = conservative_remap_plan_2d(
                 child_triangles,
@@ -712,6 +738,26 @@ def solve_one_adaptive_transport_step_2d(
             timings["chemistry_to_transport_transfer"] += perf_counter() - started
             previous_on_transport = child_previous
             older_on_transport = child_older
+        elif (
+            f2a_history is not None
+            and current_complete_history is not None
+            and parent_cell is not None
+            and (nested_previous_transfer or incremental_exact_previous_transfer)
+        ):
+            # F2A (P2): exact restriction of the parent DG1 history to the children.
+            (
+                current_complete_history,
+                older_complete_history,
+                previous_on_transport,
+                older_on_transport,
+            ) = f2a_history.restrict(
+                current_complete_history,
+                older_complete_history,
+                domain,
+                refined_domain,
+                parent_cell,
+            )
+            f2a_restricted = True
         elif nested_previous_transfer or incremental_exact_previous_transfer:
             if parent_cell is None or np.any(parent_cell < 0):
                 raise RuntimeError("Missing parent-cell map for nested transfer")
@@ -721,7 +767,7 @@ def solve_one_adaptive_transport_step_2d(
                 if older_on_transport is None
                 else older_on_transport @ triangle_areas(triangles)
             )
-            child_triangles = mesh_triangles(refined_domain)
+            child_triangles = triangles_of(refined_domain)
             child_previous = previous_on_transport[:, parent_cell]
             child_older = (
                 None
@@ -813,8 +859,9 @@ def solve_one_adaptive_transport_step_2d(
         else:
             previous_on_transport = None
             older_on_transport = None
-        current_complete_history = None
-        older_complete_history = None
+        if not f2a_restricted:
+            current_complete_history = None
+            older_complete_history = None
         domain = refined_domain
         mesh_updates += 1
 
@@ -862,7 +909,7 @@ def _process_peak_rss_bytes() -> int:
     return int(value if sys.platform == "darwin" else value * 1024.0)
 
 
-def run_adaptive_loop_2d(
+def _run_adaptive_loop_2d(
     settings: LoopSettings2D,
     chemistry: ChemistryCallbacks2D,
     *,
@@ -881,14 +928,11 @@ def run_adaptive_loop_2d(
     reaction_increment_history: bool = False,
     restart_reaction_history: dict[str, np.ndarray] | None = None,
     restart_older_reaction_history: dict[str, np.ndarray] | None = None,
+    f2a_options: F2AOptions | None = None,
+    f2a_history: F2AHistory | None = None,
+    fast_path: FastPath | None = None,
 ) -> AdaptiveRun2D:
-    """Run the adaptive 2D transport/chemistry loop.
-
-    By default the transport mesh is restarted from 5x5 at every physical
-    time step, matching the legacy control flow. A persistent transport policy
-    may instead reuse an accepted mesh inside deterministic rebuild blocks.
-    The chemistry grid always remains fixed.
-    """
+    """Implementation of :func:`run_adaptive_loop_2d` (see there)."""
 
     case = settings
     configured_time_scheme = case.time_scheme
@@ -997,6 +1041,7 @@ def run_adaptive_loop_2d(
             for name in components
         }
     )
+    triangles_of = mesh_triangles if fast_path is None else fast_mesh_triangles
     rebuild_interval = (
         1 if transport_policy is None else transport_policy.mesh_rebuild_interval
     )
@@ -1004,7 +1049,16 @@ def run_adaptive_loop_2d(
         transport_policy is not None
         and transport_policy.persistent_mesh_enabled
         and start_step > 0
-        and start_step % rebuild_interval != 0
+        and (
+            start_step % rebuild_interval != 0
+            # F2A (P3): a resume at a rebuild step also needs the last committed mesh,
+            # so that the DG1 histories can be projected onto the rebuilt mesh.
+            or (
+                f2a_options is not None
+                and f2a_options.rebuild_mesh_on_restart
+                and reaction_increment_history
+            )
+        )
     ):
         if restart_transport_triangles is None:
             raise RuntimeError(
@@ -1106,6 +1160,21 @@ def run_adaptive_loop_2d(
                     transport_policy.reused_mesh_maximum_solves,
                 )
                 mesh_age_steps = step_index % rebuild_interval
+        if not reaction_increment_history:
+            step_histories = (None, None)
+        elif f2a_history is not None and f2a_options.project_on_rebuild:
+            # F2A (P1): project the DG1 histories onto the rebuilt mesh.
+            step_histories = f2a_history.histories(
+                predictive_mesh_rebuilt,
+                current_transport_history,
+                older_transport_history,
+                persistent_domain,
+                initial_domain,
+            )
+        elif predictive_mesh_rebuilt:
+            step_histories = (None, None)
+        else:
+            step_histories = (current_transport_history, older_transport_history)
         (
             domain,
             transport,
@@ -1153,19 +1222,17 @@ def run_adaptive_loop_2d(
                 ),
                 time_scheme=step_scheme,
                 history_degree=1 if reaction_increment_history else 0,
-                previous_history_cell_values=(
-                    current_transport_history
-                    if reaction_increment_history and not predictive_mesh_rebuilt
-                    else None
-                ),
-                older_history_cell_values=(
-                    older_transport_history
-                    if reaction_increment_history and not predictive_mesh_rebuilt
-                    else None
-                ),
+                previous_history_cell_values=step_histories[0],
+                older_history_cell_values=step_histories[1],
                 snapshot_levels=normalized_snapshots.get(
                     step_index + 1, frozenset()
                 ),
+                f2a_history=(
+                    f2a_history
+                    if f2a_options is not None and f2a_options.restrict_on_refinement
+                    else None
+                ),
+                fast=fast_path,
             )
         if transport_policy is not None and transport_policy.persistent_mesh_enabled:
             persistent_domain = domain
@@ -1198,7 +1265,7 @@ def run_adaptive_loop_2d(
                 RuntimeWarning,
                 stacklevel=2,
             )
-        triangles = mesh_triangles(domain)
+        triangles = triangles_of(domain)
         transported_stack = np.stack(
             [transport[name].cell_averages for name in components]
         )
@@ -1457,9 +1524,95 @@ def run_adaptive_loop_2d(
     if not retain_all_steps and last_record is not None:
         records.append(last_record)
 
+    statistics = {}
+    if f2a_history is not None:
+        statistics["f2a"] = dict(f2a_history.stats)
+    if fast_path is not None:
+        statistics["fast"] = dict(fast_path.stats)
     return AdaptiveRun2D(
         steps=tuple(records),
         chemistry_x_edges=x_edges,
         chemistry_y_edges=y_edges,
         boundary_concentrations=boundary,
+        statistics=statistics or None,
     )
+
+
+def run_adaptive_loop_2d(
+    settings: LoopSettings2D,
+    chemistry: ChemistryCallbacks2D,
+    *,
+    components: Sequence[str],
+    model_floor: float,
+    steps: int | None = None,
+    maximum_refinement_solves: int | None = None,
+    start_step: int = 0,
+    chemistry_replay_inputs: Sequence[Mapping[str, np.ndarray]] = (),
+    snapshot_selection: Mapping[int, Sequence[int]] | None = None,
+    step_callback: Callable[[AdaptiveStep2D], None] | None = None,
+    retain_all_steps: bool = True,
+    progress: Callable[[AdaptiveStep2D], None] | None = None,
+    transport_policy: ReactiveTransportPolicy2D | None = None,
+    restart_transport_triangles: np.ndarray | None = None,
+    reaction_increment_history: bool = False,
+    restart_reaction_history: dict[str, np.ndarray] | None = None,
+    restart_older_reaction_history: dict[str, np.ndarray] | None = None,
+    history_policy: str = "rebuild",
+    f2a_options: F2AOptions | None = None,
+    fast: bool | FastOptions = False,
+) -> AdaptiveRun2D:
+    """Run the adaptive 2D transport/chemistry loop.
+
+    By default the transport mesh is restarted from 5x5 at every physical
+    time step, matching the legacy control flow. A persistent transport policy
+    may instead reuse an accepted mesh inside deterministic rebuild blocks.
+    The chemistry grid always remains fixed.
+
+    ``history_policy`` ("rebuild", the default, or "f2a") selects what happens to the
+    DG1 reaction history (``reaction_increment_history=True``) when the persistent mesh
+    is rebuilt or refined: "rebuild" restarts it from chemistry-grid averages; "f2a" is the
+    history-preserving mesh rebuild of :mod:`adaptdg.f2a` (``f2a_options`` switches its three
+    changes P1, P2 and P3 individually; all on by default). ``fast`` (True or a
+    :class:`adaptdg.fastadap.FastOptions`) selects the cost-only fast path of
+    :mod:`adaptdg.fastadap`; results agree with the plain path to round-off.
+    ``AdaptiveRun2D.statistics`` reports the counters of both when used.
+    """
+
+    if history_policy not in {"rebuild", "f2a"}:
+        raise ValueError('history_policy must be "rebuild" or "f2a"')
+    if history_policy == "rebuild" and f2a_options is not None:
+        raise ValueError('f2a_options requires history_policy="f2a"')
+    fast_path = None
+    if fast:
+        fast_path = FastPath(fast if isinstance(fast, FastOptions) else None)
+    f2a_history = None
+    if history_policy == "f2a":
+        f2a_options = F2AOptions() if f2a_options is None else f2a_options
+        f2a_history = F2AHistory(
+            components,
+            optimised=fast_path is not None and fast_path.options.plan_reuse,
+        )
+    arguments = dict(
+        components=components,
+        model_floor=model_floor,
+        steps=steps,
+        maximum_refinement_solves=maximum_refinement_solves,
+        start_step=start_step,
+        chemistry_replay_inputs=chemistry_replay_inputs,
+        snapshot_selection=snapshot_selection,
+        step_callback=step_callback,
+        retain_all_steps=retain_all_steps,
+        progress=progress,
+        transport_policy=transport_policy,
+        restart_transport_triangles=restart_transport_triangles,
+        reaction_increment_history=reaction_increment_history,
+        restart_reaction_history=restart_reaction_history,
+        restart_older_reaction_history=restart_older_reaction_history,
+        f2a_options=f2a_options,
+        f2a_history=f2a_history,
+        fast_path=fast_path,
+    )
+    if fast_path is None:
+        return _run_adaptive_loop_2d(settings, chemistry, **arguments)
+    with use_plan_builder(fast_path.plan_create):
+        return _run_adaptive_loop_2d(settings, chemistry, **arguments)
