@@ -29,8 +29,9 @@ problems, and time-dependent transport runs with adaptive meshes in 1D and 2D.
   `python run.py` takes about 30 s.
 - `examples/vms/anisotropic`: strongly anisotropic diffusion with an inner layer;
   `python run.py` takes about 15 s.
-- The 3D Fichera corner is implemented as a problem class and its example is coming; the Burgers
-  cases are not ported yet.
+- `examples/vms/fichera_3d`: 3D Poisson problem with a singular solution at the Fichera corner;
+  `python run.py` takes about 10 s (`--full`: about 4 min per preset, up to 3 GB).
+- The Burgers cases are not ported yet.
 
 Each example reads `problem.json` and `numerics.json`.
 
@@ -65,8 +66,8 @@ backend and couples the PHREEQC chemistry; adaptdg itself has no chemistry.
 ## History
 
 adaptdg continues AS-FEM. The original FEniCS 2019 code and its benchmarks are kept in the git tag
-`asfem-legacy`. Port status: Poisson / re-entrant corner, heterogeneous and anisotropic are ported;
-Fichera, Burgers and Eriksson-Johnson are pending.
+`asfem-legacy`. Port status: Poisson / re-entrant corner, heterogeneous, anisotropic and Fichera are ported;
+Burgers and Eriksson-Johnson are pending.
 
 ## How to cite
 

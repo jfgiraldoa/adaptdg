@@ -6,6 +6,8 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `adaptdg.vms`: the Fichera 3D example `examples/vms/fichera_3d` (paper section 5.3) with `paper` and `legacy` presets, both
+  error targets, adaptive and uniform refinement, cell-size statistics and plots; `problem.json` accepts the key `q`.
 - `adaptdg.vms`: every VMS run can use the choices of the original implementation (`"preset": "legacy"` in
   `numerics.json`; default `"paper"` is unchanged) and reports the errors of `ubar`, `theta` and `phi` against both the
   exact solution and its DG(p) L2 projection (new `*_proj` history columns). Individual differences are switchable

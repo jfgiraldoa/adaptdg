@@ -2,7 +2,7 @@
 
 problem.json keys (defaults in brackets): name ["reentrant_corner", "fichera", "heterogeneous",
 "anisotropic"], kappa [1.0], beta [none; (1, 0) for heterogeneous], alpha [2/3, exponent of the exact
-solution; ``q`` for fichera], eps1/eps2 [0.1/1.0, heterogeneous], r/tau [1e4/1e-3, anisotropic],
+solution; ``q`` for fichera, also accepted under the key ``q``], eps1/eps2 [0.1/1.0, heterogeneous], r/tau [1e4/1e-3, anisotropic],
 initial_mesh_size [4, even number of cells per side]. numerics.json keys: see :class:`~adaptdg.vms.loop.LoopSettings` (``eta_0`` is accepted for ``eta0``).
 """
 
@@ -33,6 +33,8 @@ def build_problem(spec: dict[str, Any]) -> Problem:
         kwargs["diffusivity"] = float(spec["kappa"])
     if "alpha" in spec:
         kwargs["alpha" if "alpha" in names else "q"] = float(spec["alpha"])
+    if "q" in spec and "q" in names:  # fichera: ``q`` is accepted as well as ``alpha``
+        kwargs["q"] = float(spec["q"])
     if spec.get("beta") and "velocity" in names:
         kwargs["velocity"] = tuple(float(v) for v in spec["beta"])
     for key in ("eps1", "eps2", "r", "tau"):  # Heterogeneous / Anisotropic parameters

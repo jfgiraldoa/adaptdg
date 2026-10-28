@@ -1,0 +1,23 @@
+{
+  "p": 1,
+  "theta_ref": 0.125,
+  "tolref": 0.2,
+  "eta_0": 1.0,
+  "max_levels": 60,
+  "dofmax": 40000,
+  "tol": 0.0,
+  "solver": "mumps",
+  "quadrature_degree": 12,
+  "refinement": "adaptive",
+  "reconstruct": true,
+  "preset": "paper",
+  "error_targets": "both",
+  "example": {
+    "dofmax_full": {"1": 150000, "2": 100000, "3": 100000},
+    "uniform_n_step": 2,
+    "presets": {
+      "paper": {"theta_ref": 0.125, "tolref": 0.2},
+      "legacy": {"preset_overrides": {"marking_ratio": 0.125}}
+    }
+  }
+}

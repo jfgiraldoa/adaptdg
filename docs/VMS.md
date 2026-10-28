@@ -63,12 +63,23 @@ suffix `_proj` against the projection (`LoopSettings.error_targets = "exact"` sk
 ## Other cases
 
 `Heterogeneous` (section 5.4, eqs. 39-40) and `Anisotropic` (section 5.5, eq. 42), see
-`examples/vms/heterogeneous/` and `examples/vms/anisotropic/`. Note on eq. (38): the paper text prints
+`examples/vms/heterogeneous/` and `examples/vms/anisotropic/`; the 3D Fichera corner has its own section below. Note on eq. (38): the paper text prints
 `beta = (0, 1)` but the exact solution (39)-(40) is a function of `x` solving `-(eps u')' + u' = 0`, so the
 implementation uses `beta = (1, 0)`. The diffusivity of `Heterogeneous` is a DG0 tensor field (the SWIP weights need
 different values on the two sides of a facet) and its start mesh needs an even number of cells per side so that
 `x = 1/2` consists of mesh facets (preserved by bisection). `refinement = "uniform"` reproduces the original
 uniform runs. First release: Dirichlet boundaries only (no Neumann).
+
+## Fichera 3D
+
+`Fichera3D` (section 5.3): `-Delta u = f` on (-1,1)^3 minus [0,1)^3 with `u = r^q` (default `q = 1/3`, also 0.1), `f` derived
+symbolically (`-q(q+1) r^(q-2)`), `meshes.fichera(n)` (even `n`), `theta_ref = 0.125`. See `examples/vms/fichera_3d/`
+(short and `--full` runs, both presets, both error targets, uniform sequence of structured meshes). With adaptive refinement the
+errors approach the optimal slopes (-p for Vh, -(p+1) for L2 against DoF^(1/3)); at p = 1 and 5e4 DoF the measured slopes
+are about -1.1 and -2.0, at p = 2 and 1e5 DoF about -2.3 and -3.7 (pre-asymptotic: the DoF cap is small in 3D), and uniform
+refinement is suboptimal (Vh about -(q + 1/2)). `reconstruct` (theta, u, phi) works in 3D. Memory: about 1 GB at 5e4 DoF
+(p = 1) and 2.5 GB at 1e5 DoF (p = 2). The legacy test used marking ratio 0.125 in 3D, whereas the `legacy` preset has the 2D
+value 0.25: the example sets `"preset_overrides": {"marking_ratio": 0.125}`.
 
 ## Modules
 
