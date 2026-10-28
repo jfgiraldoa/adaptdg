@@ -197,3 +197,38 @@ Equality (throwaway script outside the repo): source `Adap1DRun` vs `adaptdg.loo
 exchange chemistry, 60 steps, `np.array_equal` on 1020 arrays (solved edges, cell counts, transported, transported on
 the chemistry grid, reacted): 0 differences. Full-case equality through the asrtm-dg glue is documented in asrtm-dg.
 Tests: `tests/test_loop_1d.py` (fake decay chemistry, no PHREEQC).
+
+## Piece 8: MoMaS 2D adaptive and coupled loops (done)
+Extracted from ASRTM-PHREEQC at commit a152b91 (`methods/momas2d/adap.py` -> `adaptdg.loop_momas`,
+`methods/momas2d/coupled.py` -> `adaptdg.coupled_momas`). Two modules because the sources are two independent drivers
+(ADAP on the chemistry grid vs the uniform DG1 run); numerics, names and operation order unchanged.
+- `loop_momas`: `run` (the driver, name kept), `singularity_cap`, `MeshFields`, `dg1_transfer`, `full_dg1`, `linear_remap`,
+  `remap_history`, `POSITIVE`, `SINGULAR_POINTS`; plus `fast_refine_marked_triangles_with_parent` copied verbatim from
+  `methods/front2d/fastadap.py` (the leak-free refinement `adap.py` imports; the `fastadap.apply()` patches are not used by
+  `adap.py` and not copied). `dorfler_union` is `adaptdg.marking.dorfler_union_momas` (exact adapter; re-verified against the
+  inline original on 300 random cases in `tests/test_loop_momas.py` and by full runs). Not extracted: `main` (argparse CLI),
+  the `sys.path` hacks. `run`/`run_coupled` gain a required keyword-only `chemistry`.
+- `chemistry_fast.py` IS used by both drivers (`FastAnchorMomasPhreeqcRM`, site re-anchoring with one END); it is chemistry, so it
+  goes to asrtm-dg (`engines/momas_fast`), not here.
+- Chemistry enters through two documented Protocols (documentation only, never enforced; no chemistry import):
+  `ChemistryMomas` (`spec` dict with `materials` phi/alpha_* and `time` snapshots/injection_ends; `open_chemistry(materials,
+  representative_volume_l, *, concentration_scale, zero_tolerance, anchor_mode)` -> context manager yielding the engine;
+  `inlet_mobile(*, concentration_scale)` -> (2, 4)) and `EngineMomas` (`snapshot.total/mobile/fixed`, `water_volume_l`,
+  `site_total`, `react(mobile)` -> `total, mobile, fixed, primary, sites, water_mass_kg` (+ `aqueous`, `surface` in the uniform
+  run), `dump_state`/`restore_state` for checkpoints). The engine is built inside the loop because the chemistry grid
+  (cells, A/B materials, volume) depends on `kc`; the order of operations of the source (engine, initial inventory, inlet
+  reservoir) is kept. The constants of the source construction are passed in `run` (1e-6, 1e-16, "one_end").
+- Guard result: NOT triggered; adap.py's `run` is separable from its CLI, and the chemistry touchpoints (spec read, engine and
+  reservoir construction) sit outside every numerical operation.
+- Deviations: imports only (`adaptdg.flow` as `darcy`, `adaptdg.rm_transport`, `adaptdg.transport.nonnegative_means`,
+  `adaptdg.transport_2d.triangle_characteristic_sizes`, `adaptdg.transfer_2d.conservative_remap_plan_2d`,
+  `adaptdg.transport_dg2d.ConservativeDG2D`); the `model`/`WS` lines replaced as above; a file-level
+  `# ruff: noqa: E702, F821, F841` in `loop_momas` (verbatim semicolons and names bound inside the step loop).
+- Equality (throwaway script outside the repo, fenicsx python, dolfinx 0.11; source `adap.run` / `run_coupled` called from Python vs
+  the asrtm-dg glue on the adaptdg backend; per step `np.array_equal` on RM-step triangles, history, cell averages, indicators,
+  inflow/outflow, DG states, Dorfler indicators and marked sets, chemistry inputs/outputs, and on every saved array and stat except
+  timings): ADAP kc=2 dispersive dt 0.0125 t=0.1 (the example; 580 items), ADAP kc=2 advective dt 0.025 t=0.1 with rebuild
+  every 2, singularity cap, theta 0.6 (585), ADAP kc=2 remap history + mean remap + reactive marking + VMS + kb=1 + cap-before (311),
+  uniform kc=2 dispersive square chemistry (172), uniform kc=2 advective triangle chemistry (112): 0 differences; the source run twice
+  is identical. Limits: serial, short runs (t <= 0.1), checkpoint/resume path not exercised.
+- Tests: `tests/test_loop_momas.py` (fake conserving chemistry; dolfinx tests guarded with `importorskip`).

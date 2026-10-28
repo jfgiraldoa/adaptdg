@@ -6,6 +6,9 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `adaptdg.loop_momas` (MoMaS 2D ADAP loop `run` and helpers) and `adaptdg.coupled_momas` (uniform DG1 coupled run
+  `run_coupled`, `square_groups`), extracted from ASRTM-PHREEQC (asrtm-phreeqc-public @ a152b91, `methods/momas2d/adap.py`,
+  `coupled.py`) with the chemistry behind the `ChemistryMomas`/`EngineMomas` protocols (piece 8); no chemistry import, dolfinx lazy.
 - `adaptdg.rm_1d` (`RMOperator1D`) and `adaptdg.loop_1d` (`Adap1DRun`, `Adap1DSettings`, 1D transfers and positivity
   fixes, `Chemistry1D` protocol documenting the duck-typed chemistry): the 1D residual-minimisation operator and the 1D
   ADAP loop of the paper, extracted from ASRTM-PHREEQC (asrtm-phreeqc-public @ a152b91, `methods/onedim/rm1d.py`,

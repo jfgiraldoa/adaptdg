@@ -31,6 +31,15 @@ from adaptdg.transport_dg2d import ConservativeDG2D
 POSITIVE = (0, 2, 3)
 
 
+def square_groups(domain, hx, hy, ny):
+    """Group index per triangle: the square (of size hx x hy, ny rows) containing its midpoint."""
+    from dolfinx import mesh
+
+    n = domain.topology.index_map(2).size_local
+    mid = mesh.compute_midpoints(domain, 2, np.arange(n, dtype=np.int32))
+    return (np.floor(mid[:, 0] / hx).astype(int) * ny + np.floor(mid[:, 1] / hy).astype(int))
+
+
 def run_coupled(domain, facet_tags, inlet_tags, q, materials, *, regime, dt, end_time,
                 groups=None, save_times=(), label="", penalty=20.0, chem_volume_l=None,
                 anchor_mode="one_end", checkpoint_dir=None, checkpoint_every=0,
