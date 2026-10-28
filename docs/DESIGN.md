@@ -17,7 +17,7 @@ package imports without it.
    ASRTM-PHREEQC at commit a152b91; `transfer_field` stays a stub).
 2. DG1 transport. 1D (piece 5a) and 2D/Darcy (piece 5b) **done**, see below. Piece 5 is complete.
 3. Estimators (pending) and Dörfler marking (**marking done**, see below).
-4. ADAP loop.
+4. ADAP loop and mesh persistence (piece 6). **Done**, see below.
 
 ## Piece 2: Dörfler marking (done)
 Extracted from ASRTM-PHREEQC at commit a152b91 into `adaptdg.marking`. The
@@ -129,3 +129,54 @@ Extracted from ASRTM-PHREEQC at commit a152b91 (source repo `asrtm-phreeqc-publi
   Darcy on MoMaS meshes k=1,2 (+ k=3 geometry), heterogeneous random K on a k=2 mesh and on a locally refined k=1 mesh;
   6 `ConservativeDG2D` setups (3 components, positive (0,2)/none, DG0 and constant porosity, aL 1e-4..1e-1, 3 steps with a dt change, `replace_cell_means`)
   and 12 `RMTransportMoMaS2D` runs (history 0/1, SWIP on/off, 3 steps, `fine_scale`). Limit: serial, dolfinx 0.11 only; the positivity limiter was not forced.
+
+## Piece 6: ADAP loop and mesh persistence with chemistry callbacks (done)
+Extracted from ASRTM-PHREEQC at commit a152b91 (`adaptive_calcite_dolomite_2d.py`,
+`reactive_transport_policy_2d.py`). Guard result: NOT triggered. The loop touches chemistry in only a few
+places, none of them inside a numerical operation, so no operation or order changed.
+Chemistry/config touchpoints found in `run_calcite_dolomite_adaptive_2d` and how they became parameters:
+| Touchpoint in the source | Replacement |
+| --- | --- |
+| `load_case(config_path)` (mesh, time, transport, chemistry cells, adaptivity) | `LoopSettings2D` dataclass (`adaptivity` stays a duck-typed object with `theta, epsilon_chem, eligibility_factor, tie_tolerance, initial_cells_2d, maximum_refinements`) |
+| `EquilibriumCalciteDolomite2DPhreeqcRM(...)` construction, `chemistry.snapshot` | `ChemistryCallbacks2D.snapshot()` |
+| `chemistry.react(inputs, time_step=)` (also in checkpoint replay) | `ChemistryCallbacks2D.react` |
+| `chemistry.boundary` | `ChemistryCallbacks2D.boundary` (dict) |
+| `Calcite`/`Dolomite` fields seeding the predictive mesh | `ChemistryCallbacks2D.seed_fields(snapshot, shape)` (optional) |
+| `_solid_component_inventory` (mass diagnostics) | `ChemistryCallbacks2D.solid_inventory(name, state, shape, areas)` (optional, default 0.0) |
+| `COMPONENTS_2D` | `components` argument |
+| `PHREEQC_MODEL_FLOOR_MOL_L` | `model_floor` argument of the loop and of `prepare_chemistry_component_2d` |
+| record fields `chemistry_molalities, calcite, dolomite, carbonate, ph`; result `porosity` | record keeps `chemistry_result` (the object `react` returned); porosity dropped (engine property) |
+Four callbacks (snapshot, react required; seed_fields, solid_inventory optional) plus the `boundary` dict.
+Layout: `adaptdg.loop` = `run_adaptive_loop_2d`, `solve_one_adaptive_transport_step_2d`,
+`prepare_chemistry_component_2d`, `AdaptiveStep2D`, `AdaptiveRun2D`, `AdaptiveRefinementSnapshot2D`,
+`NegativeTransportCorrection2D` (+ the `AdaptiveTransport` stub, unchanged). `adaptdg.mesh` =
+`ReactiveTransportPolicy2D`, `reactive_front_seed_regions/points`, `create_predictive_reactive_mesh_2d`,
+`persistent_mesh_rebuild_required`, `_triangle_restart_permutation` (+ the `adapt_mesh` stub, unchanged).
+`adaptdg.fields` unchanged (stub): the source has no field registry. Dörfler: the loop calls
+`adaptdg.marking.dorfler_union_2d(names=components)` instead of a second copy of `_dorfler_union_2d`.
+Kept verbatim: all control flow, solve/estimate/mark/refine order, history transfer strategies, restart
+(`start_step`, replay inputs, mid-block triangles, DG1 histories), snapshots, timings, mass diagnostics.
+Left out: `front2d/fastadap.py`, `rm_class_patch.py`, `wall_bc.py`, `wall_seeds.py`, `checkpoint_2d`,
+`history_projection*.py` (only used by those patches), `load_case`/config validation (dimension, method,
+`adaptivity.enabled` checks), `COMPONENTS_2D`, the chemistry engine, `_solid_component_inventory`,
+`PHREEQC_MG_MODEL_FLOOR_MOL_L` alias.
+Deviations (all outside numerics): names (`run_calcite_dolomite_adaptive_2d` -> `run_adaptive_loop_2d`,
+`_solve_one_adaptive_transport_step_2d` -> `solve_one_adaptive_transport_step_2d`,
+`_prepare_chemistry_component_2d` -> `prepare_chemistry_component_2d`, step/result dataclasses renamed);
+config object -> `LoopSettings2D`; the record stores `chemistry_result`; `Path`/`load_case` imports gone.
+Equality (throwaway script outside the repo, fenicsx env, dolfinx 0.11, phreeqcrm; case of
+`examples/front2d_calcite_dolomite` with chemistry grid 24x24, dt 1500 s, 5x5 initial mesh): source
+`run_calcite_dolomite_adaptive_2d` vs adaptdg loop with the chemistry callbacks wrapping (i) the
+`asrtm_dg.engines.equilibrium_2d` engine and (ii) the source engine; per step `np.array_equal` on triangles, transported
+cell averages/nodal values/indicators, chemistry input/output concentrations, molalities, calcite, dolomite, carbonate,
+pH, negative-correction diagnostics, snapshot marked sets, mass diagnostics and work counts (timings and RSS excluded).
+Setups (BDF2, 12-14 steps): A legacy 5x5 restart every step (12 steps, mesh updates 60..90 triangles); B persistent mesh
+interval 3 + core/halo policy + DG1 reaction-increment history (14 steps, 472..3000 triangles); C persistent policy with
+snapshots at step 2 levels 0,1 and step 4 level 0 (marked sets 18, 38, 40 cells; 12 steps); D mid-block restart of B at step 8
+with replay inputs, restart triangles and both DG1 histories (6 steps; also identical to the uninterrupted source). A also
+with backward Euler (12 steps). 0 differences over 12253 compared arrays/scalars in the BDF2 batch (+3490 for BE A). The
+plan cache counters are compared after resetting both caches before every run (they are module state shared by consecutive
+runs in one process). Limits: BE + DG1 history cannot run in the source either (ValueError); only the serial 24x24 chemistry
+case; the stagnation guard and nested/full transfer strategies of `solve_one_adaptive_transport_step_2d` were not exercised
+(the loop never enables them); CG1 degree 1 only.
+Tests: `tests/test_loop.py` (fake chemistry, no PHREEQC; dolfinx tests guarded with `importorskip`).

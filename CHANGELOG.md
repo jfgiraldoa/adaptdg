@@ -19,6 +19,10 @@ versioning: Semantic Versioning.
   solver), `adaptdg.transport_dg2d` (`momas2d/transport`: general 2D conservative DG1), `adaptdg.rm_transport`
   (`momas2d/rm_transport`) and the Darcy RT0-DG0 solver (`momas2d/darcy`) in `adaptdg.flow`, extracted from
   ASRTM-PHREEQC (commit a152b91); piece 5 is complete.
+- `adaptdg.loop`: the 2D ADAP loop `run_adaptive_loop_2d` and `solve_one_adaptive_transport_step_2d` extracted from
+  ASRTM-PHREEQC (commit a152b91) with chemistry as callbacks (`ChemistryCallbacks2D`) and numerical settings in
+  `LoopSettings2D`; `adaptdg.mesh`: persistent-mesh policy and predictive reactive mesh. `AdaptiveTransport` and
+  `adapt_mesh` remain stubs (piece 6).
 
 ## [0.0.1] - unreleased
 
