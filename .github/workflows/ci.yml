@@ -17,6 +17,12 @@ jobs:
 
   fem:
     runs-on: ubuntu-latest
+    env:
+      # MPICH/libfabric on GitHub runners can abort silently (exit code 16) in the first MUMPS solve;
+      # the TCP provider and single-thread BLAS avoid it (same settings as the local runs).
+      FI_PROVIDER: tcp
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
     defaults:
       run:
         shell: bash -el {0}
