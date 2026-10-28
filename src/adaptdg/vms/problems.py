@@ -296,6 +296,26 @@ class ErikssonJohnson3D(ErikssonJohnson):
         return unit_cube(n, comm)
 
 
+@dataclass
+class PoissonSine(Problem):
+    """-Delta u = 10 sin(pi x) sin(pi y) on the unit square, ``u = 0`` on the boundary (smooth case of the legacy
+    ``test_poisson_FEM_solution``); exact solution ``10/(2 pi^2) sin(pi x) sin(pi y)``."""
+
+    amplitude: float = 10.0
+    name = "poisson_sine"
+    dim = 2
+
+    def exact(self, x: Any) -> Any:
+        import ufl
+
+        return self.amplitude / (2 * np.pi**2) * ufl.sin(ufl.pi * x[0]) * ufl.sin(ufl.pi * x[1])
+
+    def initial_mesh(self, n: int, comm: Any = None) -> Any:
+        from adaptdg.vms.meshes import crossed_rectangle
+
+        return crossed_rectangle(n, (0.0, 0.0), (1.0, 1.0), comm)
+
+
 PROBLEMS: dict[str, type[Problem]] = {
     "reentrant_corner": ReentrantCorner,
     "fichera": Fichera3D,
@@ -303,4 +323,5 @@ PROBLEMS: dict[str, type[Problem]] = {
     "anisotropic": Anisotropic,
     "eriksson_johnson": ErikssonJohnson,
     "eriksson_johnson_3d": ErikssonJohnson3D,
+    "poisson_sine": PoissonSine,
 }

@@ -1,0 +1,45 @@
+{
+  "p": 1,
+  "theta_ref": 0.25,
+  "tolref": 0.2,
+  "eta_0": 1.0,
+  "max_levels": 60,
+  "dofmax": 6000,
+  "tol": 0.0,
+  "solver": "mumps",
+  "quadrature_degree": 12,
+  "refinement": "adaptive",
+  "reconstruct": true,
+  "preset": "paper",
+  "error_targets": "both",
+  "method": "rm",
+  "compare_galerkin": true,
+  "example": {
+    "degrees": {
+      "short": [
+        1,
+        2
+      ],
+      "full": [
+        1,
+        2,
+        3
+      ]
+    },
+    "dofmax": {
+      "short": {
+        "1": 6000,
+        "2": 8000
+      },
+      "full": {
+        "1": 100000,
+        "2": 100000,
+        "3": 100000
+      }
+    },
+    "presets": {
+      "paper": {},
+      "legacy": {}
+    }
+  }
+}

@@ -37,6 +37,8 @@ class LoopSettings:
     preset: Any = "paper"  # "paper" | "legacy" | Preset (see adaptdg.vms.preset)
     preset_overrides: dict[str, Any] | None = None  # Preset fields to change, e.g. {"gram_l2": True}
     error_targets: str = "both"  # "both" | "exact": "both" adds the *_proj columns (L2 projection of u_exact)
+    method: str = "rm"  # "rm" residual minimisation | "galerkin" plain CG(p) baseline (uniform refinement only)
+    compare_galerkin: bool = False  # "rm" only: add L2_cg, Vh_cg (and *_proj) of CG(p) Galerkin on the same meshes
 
 
 def mark_cells(indicators: np.ndarray, theta: float, tolref: float) -> np.ndarray:
@@ -53,6 +55,10 @@ class AdaptiveStationaryLoop:
     def __init__(self, problem: Any, settings: LoopSettings, domain: Any = None) -> None:
         if settings.refinement not in ("adaptive", "uniform"):
             raise ValueError("refinement must be 'adaptive' or 'uniform'")
+        if settings.method not in ("rm", "galerkin"):
+            raise ValueError("method must be 'rm' or 'galerkin'")
+        if settings.method == "galerkin" and settings.refinement != "uniform":
+            raise ValueError("method 'galerkin' has no error indicator: use refinement 'uniform'")
         self.problem, self.settings = problem, settings
         self.domain = domain if domain is not None else problem.initial_mesh(settings.initial_mesh_size)
         self.history: list[dict[str, float]] = []
@@ -61,6 +67,7 @@ class AdaptiveStationaryLoop:
 
     def run(self, progress: Callable[[str], None] | None = print) -> list[dict[str, float]]:
         from adaptdg.marking import fixed_fraction_bands
+        from adaptdg.vms.galerkin import galerkin_errors, solve_galerkin
         from adaptdg.vms.norms import error_targets, history_columns
         from adaptdg.vms.preset import resolve_preset
         from adaptdg.vms.reconstruction import reconstruct
@@ -76,25 +83,37 @@ class AdaptiveStationaryLoop:
         ordering = s.adjoint_ordering if preset.adjoint_ordering is None else preset.adjoint_ordering
         ratio = theta if preset.marking_ratio is None else preset.marking_ratio
         targets = ("exact", "projection") if s.error_targets == "both" else ("exact",)
+        rm = s.method == "rm"
         solver = RMSolver(self.problem, s.p, eta0=s.eta0, quadrature_degree=qdeg,
                           solver=s.solver, preset=preset)
+        gopts = {"eta0": s.eta0, "quadrature_degree": qdeg, "solver": s.solver, "preset": preset}
         for level in range(s.max_levels):
             t0 = time.time()
-            self.result = res = solver.solve(self.domain)
             ncells = self.domain.topology.index_map(self.domain.topology.dim).size_local
-            if s.reconstruct:
-                self.vms = reconstruct(res, adjoint_ordering=ordering, solver=s.solver)
-            errs = error_targets(res, self.problem, s.p, degree=qdeg,
-                                 vms=self.vms if s.reconstruct else None, targets=targets)
-            cols = history_columns(errs)
+            if rm:
+                self.result = res = solver.solve(self.domain)
+                if s.reconstruct:
+                    self.vms = reconstruct(res, adjoint_ordering=ordering, solver=s.solver)
+                errs = error_targets(res, self.problem, s.p, degree=qdeg,
+                                     vms=self.vms if s.reconstruct else None, targets=targets)
+                cols = {"E": res.E, **history_columns(errs)}
+            else:  # plain Galerkin: no estimator, hence no "E" column
+                self.result = res = solve_galerkin(self.problem, self.domain, s.p, **gopts)
+                cols = history_columns(galerkin_errors(res, self.problem, s.p, degree=qdeg, targets=targets))
+            if rm and s.compare_galerkin:
+                cg = solve_galerkin(self.problem, self.domain, s.p, **gopts)
+                cg_errs = galerkin_errors(cg, self.problem, s.p, degree=qdeg, targets=targets)
+                cols.update(history_columns({t: {"cg": v["ubar"]} for t, v in cg_errs.items()}))
             l2, vh = cols["L2"], cols["Vh"]
-            row = {"level": level, "ndofs": res.ndofs, "ncells": int(ncells), "E": res.E, **cols}
+            row = {"level": level, "ndofs": res.ndofs, "ncells": int(ncells), **cols}
             self.history.append({**row, "time": time.time() - t0})
             if progress:
-                extra = f" Vh_phi={row['Vh_phi']:.3e}" if s.reconstruct else ""
+                extra = f" Vh_phi={row['Vh_phi']:.3e}" if rm and s.reconstruct else ""
+                extra += f" Vh_cg={row['Vh_cg']:.3e}" if rm and s.compare_galerkin else ""
+                est = f"E={res.E:.3e} " if rm else "galerkin "
                 progress(f"level {level + 1}/{s.max_levels} p={s.p} ndofs={res.ndofs} "
-                         f"E={res.E:.3e} L2={l2:.3e} Vh={vh:.3e}{extra} t={time.time() - t0:.1f}s")
-            if (level + 1 == s.max_levels or res.E <= s.tol
+                         f"{est}L2={l2:.3e} Vh={vh:.3e}{extra} t={time.time() - t0:.1f}s")
+            if (level + 1 == s.max_levels or (rm and res.E <= s.tol)
                     or (s.dofmax is not None and res.ndofs >= s.dofmax)):
                 break
             if s.refinement == "uniform":

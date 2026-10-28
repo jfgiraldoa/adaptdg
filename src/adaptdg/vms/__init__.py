@@ -11,9 +11,10 @@ from adaptdg.vms.problems import (
     ErikssonJohnson3D,
     Fichera3D,
     Heterogeneous,
+    PoissonSine,
     Problem,
     ReentrantCorner,
 )
 
-__all__ = ["Anisotropic", "ErikssonJohnson", "ErikssonJohnson3D", "Fichera3D", "Heterogeneous",
+__all__ = ["Anisotropic", "ErikssonJohnson", "ErikssonJohnson3D", "Fichera3D", "Heterogeneous", "PoissonSine",
            "Problem", "ReentrantCorner"]

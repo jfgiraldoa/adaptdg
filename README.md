@@ -33,6 +33,8 @@ problems, and time-dependent transport runs with adaptive meshes in 1D and 2D.
   `python run.py` takes about 10 s (`--full`: about 4 min per preset, up to 3 GB).
 - `examples/vms/eriksson_johnson`: steady Eriksson-Johnson problem with a boundary layer (2D, and the 3D variant);
   `python run.py` takes about 20 s (`--full`: about 8 min per preset, up to 4 GB).
+- `examples/vms/poisson_fem`: plain CG(p) Galerkin baseline versus residual minimisation on the re-entrant corner;
+  `python run.py` takes about 15 s.
 - The Burgers cases are not ported yet.
 
 Each example reads `problem.json` and `numerics.json`.
@@ -68,7 +70,7 @@ backend and couples the PHREEQC chemistry; adaptdg itself has no chemistry.
 ## History
 
 adaptdg continues AS-FEM. The original FEniCS 2019 code and its benchmarks are kept in the git tag
-`asfem-legacy`. Port status: Poisson / re-entrant corner, heterogeneous, anisotropic, Fichera and the steady
+`asfem-legacy`. Port status: Poisson / re-entrant corner, heterogeneous, anisotropic, Fichera, the Poisson FEM baseline and the steady
 Eriksson-Johnson problem (2D and 3D) are ported; Burgers and the unsteady Eriksson-Johnson cases are pending.
 
 ## How to cite

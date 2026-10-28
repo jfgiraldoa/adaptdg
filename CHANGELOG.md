@@ -6,6 +6,9 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `adaptdg.vms.galerkin`: standard CG(p) Galerkin baseline (`solve_galerkin`, `galerkin_errors`) with the same problems, meshes
+  and error targets; `LoopSettings.method` (`"rm"` | `"galerkin"`) and `compare_galerkin`; the problem `PoissonSine` and the
+  example `examples/vms/poisson_fem` (Galerkin versus residual minimisation on the re-entrant corner).
 - `adaptdg.vms`: the steady Eriksson-Johnson problem (`ErikssonJohnson`, `ErikssonJohnson3D`, `meshes.unit_cube`) and the example
   `examples/vms/eriksson_johnson` (paper section 5.6) with `paper` and `legacy` presets, both error targets, adaptive and
   uniform refinement, two diffusivities and a 3D option.

@@ -93,10 +93,24 @@ cube (`beta = (1, 0, 0)`, same solution, six faces); the original code only ran 
 paper preset): the mean cell size away from the layer is 12 times that in `x > 0.9`; the last-window Vh slope is about
 -1.3 (p = 1) and -2.2 (p = 2) against DoF^(1/2); at kappa = 1e-3 the uniform sequences do not resolve the layer.
 
+## Galerkin baseline (Poisson FEM)
+
+`galerkin.solve_galerkin(problem, mesh, p)` solves the standard conforming `CG(p)` Galerkin problem on the same `Problem`
+classes (strong Dirichlet data on the tagged boundary; for advection it is not stabilised, no SUPG) and
+`galerkin.galerkin_errors` returns its (L2, Vh) errors with the same two targets and the same Gram-form Vh norm as the
+residual-minimisation solver, so the numbers are comparable. `LoopSettings.method = "galerkin"` runs the loop with it
+(uniform refinement only: the legacy baseline had no indicator, hence no `E` column) and
+`compare_galerkin = true` adds `L2_cg, Vh_cg` (and `_proj`) columns to a residual-minimisation loop (Galerkin on the same
+meshes). `PoissonSine` (`"poisson_sine"`) is the smooth legacy test (`-Delta u = 10 sin(pi x) sin(pi y)`); on it Galerkin
+converges at p + 1 (L2) and p (Vh), and P1 on the 10 x 10 mesh gives ||u_h|| = 0.2472 (legacy reference 0.247140).
+See `examples/vms/poisson_fem/`. Measured on the re-entrant corner (30k-100k DoF): on adaptive meshes CG and `ubar` have the
+same Vh error (ratio 1.00 +- 0.02) and slopes (-1.0 at p = 1, -2.2 at p = 2 against DoF^(1/2)); `phi` has the smallest
+L2 error and a Vh error 1.1-1.5 times larger than CG against the exact solution.
+
 ## Modules
 
 `problems` (`Problem`, `ReentrantCorner`, `Fichera3D`, `Heterogeneous`, `Anisotropic`, `ErikssonJohnson`,
-`ErikssonJohnson3D`), `meshes` (crossed-triangle L-shape, Fichera cube, unit cube, boundary tags), `dgforms`, `saddle` (`RMSolver`, `RMResult`), `refine`
+`ErikssonJohnson3D`, `PoissonSine`), `galerkin` (`solve_galerkin`, `galerkin_errors`), `meshes` (crossed-triangle L-shape, Fichera cube, unit cube, boundary tags), `dgforms`, `saddle` (`RMSolver`, `RMResult`), `refine`
 (`refine_marked`, `refine_uniform`, any dimension), `norms` (`error_targets`, `error_norms`, `error_norms_vms`), `preset` (`Preset`, `resolve_preset`), `reconstruction` (`reconstruct`, `VMSResult`), `loop`
 (`AdaptiveStationaryLoop`, `LoopSettings`, `fitted_slope`) and `run` (`run_from_json`).
 
