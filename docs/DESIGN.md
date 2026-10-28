@@ -232,3 +232,69 @@ Extracted from ASRTM-PHREEQC at commit a152b91 (`methods/momas2d/adap.py` -> `ad
   uniform kc=2 dispersive square chemistry (172), uniform kc=2 advective triangle chemistry (112): 0 differences; the source run twice
   is identical. Limits: serial, short runs (t <= 0.1), checkpoint/resume path not exercised.
 - Tests: `tests/test_loop_momas.py` (fake conserving chemistry; dolfinx tests guarded with `importorskip`).
+
+## Piece 9 (Case 4): evolving-porosity transport and ADAP modules (done, partial by design)
+Extracted from ASRTM-PHREEQC at commit a152b91 into the subpackage `adaptdg/case4/` (copy; numerics, public names and operation
+order unchanged; provenance in each docstring). A subpackage (not flat modules) because the source modules share short names with
+other families (`positivity`, `dg_history`, `adap_*`) and a common `constants`.
+
+### Module map and classification
+| source | role | class | adaptdg |
+|---|---|---|---|
+| `case4dev/adap_persistent.py` | persistent nested-mesh ADAP, DOLFINx operator (`--transport adap`) | TRANSPORT-ADAPTIVE | `case4.adap_persistent` |
+| `case4dev/adap_fast.py` | same method, NumPy/SuperLU assembly; positivity (global/local), minmod/FCT chemistry-scale limiters, `UniformFineTransport` | TRANSPORT-ADAPTIVE | `case4.adap_fast` |
+| `case4dev/adap_asfem.py` | ASFEM Riesz-norm estimator + `ASFEMAdaptiveTransport`; its `dorfler_with_ties` is the body already in `adaptdg.marking` | TRANSPORT-ADAPTIVE | `case4.adap_asfem` (imports `marking.dorfler_with_ties`, name kept) |
+| `case4dev/transport_bdf2.py` | BE/BDF2 substeps for DG (`BDF2DGTransport`) and ADAP (`BDF2AdaptiveTransport`) | TRANSPORT-ADAPTIVE | `case4.transport_bdf2` |
+| `case4dev/dg_history.py` | DG1 history (`dg1`/`mean`), minmod, local positivity, reaction update (`HistoryDGTransport`) | TRANSPORT | `case4.dg_history` |
+| `case4dev/positivity.py` | local mean redistribution, slope scaling (numpy) | TRANSPORT | `case4.positivity` |
+| `case4dev/variable_dt.py` | `next_dt` rule + variable-dt DG1 backend | TRANSPORT | `case4.variable_dt` |
+| `case4dev/coarse_transport.py` | DG1 on a coarser grid than the chemistry grid | TRANSPORT | `case4.coarse_transport` |
+| `case4dev/fv_transport.py` | first-order upwind FV (DG0), `--history fv0` | TRANSPORT | `case4.fv_transport` |
+| `porosity/dg_1d.py` | `PorosityDG1D`, uniform DG1 weak form + MUMPS | TRANSPORT | `case4.dg_1d` |
+| `porosity/coupling.py` | `Case4State`, `advance_case4_step` (Strang splitting, midpoint kinetics call, geometry timing), `update_geometry`, `UniformDGTransport`, `AdaptivePorosityTransport` | COUPLING loop (transport + chemistry hook) | `case4.coupling` (`run_uniform_case4` omitted: builds the engine) |
+| `case4dev/chemistry_b1.py`, `chemistry_n.py`, `porosity/case4.py` | PhreeqcRM engines (`Case4Chemistry`, B1, N-cell mapping) | CHEMISTRY | asrtm-dg (`engines.case4`), not extracted here |
+| `porosity/geometry.py` | `ReactorVolumeBasis`, `evolve_porosity` (numpy) | GEOMETRY | already in asrtm-dg; passed to the loop through the `model` hook |
+| `porosity/checkpoint.py` | atomic checkpoint write/read (JSON + npz + gz RAW dump) | DRIVER/IO | not extracted |
+| `case4dev/run_case4_dg.py` | argparse, SQLite history, gzip blobs, flock, checkpoint/resume, progress, code hashes | DRIVER/CLI | stays in the paper repo / glue |
+
+Imports re-pointed: `LENGTH_M`/`INITIAL_POROSITY` -> `adaptdg.case4.constants` (2.0, 0.35, benchmark values); `dorfler_mark_1d`
+-> `adaptdg.marking`, `gradient_jump_indicator_1d`, `conservative_positive_projection_1d` -> `adaptdg.transport` (adapters/copies
+proven equal in pieces 4-5 and re-verified through every ADAP run below); `PorosityDG1D` -> `case4.dg_1d`. File-level
+`# ruff: noqa` only in `adap_fast`, `adap_persistent` (E702), `dg_history` (E402, E702), `variable_dt` (F401).
+
+### Chemistry touchpoints (defines the asrtm-dg glue, step 3b)
+All transport backends read only three attributes of the chemistry object: `cells` (int), `components` (tuple of names, order =
+rows of the concentration array, units mol/L water) and `inlet` (array per component, mol/L). Only
+`coupling.advance_case4_step` calls the chemistry: `chemistry.react(concentrations, porosity, minerals_mol_per_reactor, time_s,
+dt_s) -> (aqueous, minerals_after, balance)` once per macro step, after substep `strang_substeps // 2`, at `time_s = (step - 0.5) dt`;
+`balance[element]` has `relative` and `absolute_mol_per_reactor` arrays. The initial state needs `chemistry.concentrations`
+(components x cells) and `chemistry.minerals_mol` (`Calcite`, `Gypsum`, mol per 1 L reactor). The Case 4 model enters through the
+documented `Case4Model` hook (a module or namespace): `VM_M3_MOL`, `darcy_flux_m_s(porosity)`, `ReactorVolumeBasis`,
+`evolve_porosity`; asrtm-dg already owns all four (`engines.case4`, `geometry`). The glue must also: apply `TimedChemistry`/Na
+balance and `time_override_s` (variable dt) if it wants them, and `_install_clog_threshold` (monkeypatches
+`_set_kinetic_area`; engine side). The restart state of a backend is `checkpoint_arrays()` / `restore(arrays)` (kept as is).
+
+### Guard result and what stays in the driver
+The guard was PARTIALLY triggered. The numerical state of a run is produced by `advance_case4_step` plus the backend; the rest of
+`run_case4_dg.py::main` interleaves that loop with argparse validation, the code-hash configuration, flock, SQLite append/truncate,
+checkpoint writes with PHREEQC RAW dumps and resume reconstruction, and the per-step diagnostics (element inventories, cumulative
+boundary balances, BDF2 offsets, positivity aggregation) read from `backend.substep_log` and written to the history rows. Cutting
+a `run` function out of that would mean re-ordering the history/checkpoint I/O around the loop and re-implementing the resume
+branch (backend restore, chemistry restore, history truncation), which is not a copy. Extracted: every separable numerical module
+and the step-level coupling (`advance_case4_step`). Options for the driver: (a) keep it in the paper repo importing `adaptdg.case4`
+(minimal); (b) in the asrtm-dg glue, write a thin step loop on `advance_case4_step` plus the diagnostics (`inventories`,
+cumulative balance), leaving history/checkpoint to the caller; neither changes a numerical operation.
+
+### Equality (throwaway script outside the repo, fenicsx python, dolfinx 0.11, serial)
+Source classes (`case4dev.*`, `asrtm_phreeqc.porosity.coupling`) vs `adaptdg.case4.*`, each side with its own fresh instance of the
+source chemistry (`case4dev.chemistry_n.make_chemistry`, deterministic) and the source `darcy_flux_m_s`/geometry passed as the
+`model`; per step `np.array_equal` on porosity, concentrations, minerals, every `record` entry, every `substep_log` entry
+(positivity, balances, estimators), nodal/means_seen, mesh edges, `checkpoint_arrays`, BDF2 offsets. 16 setups, 0 differences in
+all (items compared in parentheses): DG1 local N=80, 20 steps (the example, 11048); DG1 minmod+TVB N=40 dt 10800 4 substeps (2596);
+history `mean` + no positivity + proportional update (2200); fv0 N=80 20 steps (10960); fv0 N=40 dt 43200 reaction_midpoint
+(3288); variable-dt DG1 with dts 21600/32400/43200 (2810); coarse transport 40->20 (2822); BDF2 DG (1996); ADAP fast N=40 10 steps
+(max 63 transport cells; 5390), with minmod+proportional (6110), FCT (6830), minmod_chem (5870); uniform_fine N=20 (3234);
+ADAP persistent DOLFINx N=20 (2156); BDF2 ADAP N=40 (4208); ASFEM N=40 BDF2 (4648). Limits: serial, short runs (<= 20 steps),
+checkpoint/resume and the driver not exercised; `Case4Chemistry` itself not compared (not extracted).
+Tests: `tests/test_case4_transport.py` (numpy/scipy, fake chemistry and model, lazy-import check in a subprocess),
+`tests/test_case4_dolfinx.py` (guarded with `importorskip`), shared fakes in `tests/case4_fakes.py`.

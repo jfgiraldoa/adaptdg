@@ -6,6 +6,12 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `adaptdg.case4` subpackage (piece 9): Case 4 (evolving porosity, Xie B2) transport and ADAP modules extracted from
+  ASRTM-PHREEQC (asrtm-phreeqc-public @ a152b91, `methods/case4dev/` and `porosity/{dg_1d,coupling}.py`): `adap_persistent`,
+  `adap_fast`, `adap_asfem`, `transport_bdf2`, `dg_history`, `positivity`, `variable_dt`, `coarse_transport`, `fv_transport`
+  (`--history fv0`), `dg_1d`, `coupling` (`Case4State`, `advance_case4_step`, `Case4Model` protocol) and `constants`. No
+  chemistry import; dolfinx lazy. Not extracted: the driver `run_case4_dg.py` (CLI, SQLite/gzip history, checkpoints), the
+  checkpoint module and the chemistry modules (see docs/DESIGN.md).
 - `adaptdg.loop_momas` (MoMaS 2D ADAP loop `run` and helpers) and `adaptdg.coupled_momas` (uniform DG1 coupled run
   `run_coupled`, `square_groups`), extracted from ASRTM-PHREEQC (asrtm-phreeqc-public @ a152b91, `methods/momas2d/adap.py`,
   `coupled.py`) with the chemistry behind the `ChemistryMomas`/`EngineMomas` protocols (piece 8); no chemistry import, dolfinx lazy.
