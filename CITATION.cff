@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "adaptdg"
+version: 0.0.1
+authors:
+  - family-names: "Giraldo Avila"
+    given-names: "Juan Felipe"
+license: MIT
+repository-code: "https://github.com/jfgiraldoa/adaptdg"
+# TODO: doi, date-released

@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adaptdg"
+version = "0.0.1"
+description = "Adaptive discontinuous-Galerkin transport on FEniCSx (pre-alpha)."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Juan Felipe Giraldo Avila" }]
+dependencies = ["numpy", "scipy"]
+
+[project.optional-dependencies]
+# dolfinx, petsc4py and mpi4py are NOT pip-installable: they come from
+# conda-forge (fenics-dolfinx=0.11). This extra only documents the requirement.
+fem = []
+dev = ["pytest", "ruff", "build", "twine"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]

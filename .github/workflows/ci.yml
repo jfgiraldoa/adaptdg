@@ -1,0 +1,34 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  pure-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .[dev]
+      - run: ruff check .
+      - run: python -m pytest -q
+
+  fem:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
+        with:
+          channels: conda-forge
+          channel-priority: strict
+          python-version: "3.12"
+          activate-environment: adaptdg
+      - run: conda install -y fenics-dolfinx=0.11 pytest ruff
+      - run: pip install -e .
+      - run: ruff check .
+      - run: python -m pytest -q
