@@ -59,7 +59,7 @@ discretisation and the adaptive loop (degree, marking, refinement).
 
 ## Used by
 
-[asrtm-dg](https://github.com/jfgiraldoa/asrtm-dg) (ASRTM-PHREEQC) uses adaptdg as its transport
+[asrtm-phreeqc](https://github.com/jfgiraldoa/asrtm-phreeqc) (ASRTM-PHREEQC) uses adaptdg as its transport
 backend and couples the PHREEQC chemistry; adaptdg itself has no chemistry.
 
 ## History
