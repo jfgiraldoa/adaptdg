@@ -23,7 +23,6 @@ def test_stubs_raise():
     calls = {
         "transport": ("transport_step", (None, None, 1.0)),
         "estimators": ("cell_indicators", (None, None)),
-        "marking": ("dorfler_mark", (None,)),
         "mesh": ("adapt_mesh", (None, None)),
         "transfer": ("transfer_field", (None, None, None)),
     }
