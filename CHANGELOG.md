@@ -6,6 +6,11 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `adaptdg.rm_1d` (`RMOperator1D`) and `adaptdg.loop_1d` (`Adap1DRun`, `Adap1DSettings`, 1D transfers and positivity
+  fixes, `Chemistry1D` protocol documenting the duck-typed chemistry): the 1D residual-minimisation operator and the 1D
+  ADAP loop of the paper, extracted from ASRTM-PHREEQC (asrtm-phreeqc-public @ a152b91, `methods/onedim/rm1d.py`,
+  `adap1d.py`); numpy/scipy only, no dolfinx and no chemistry import (piece 7). `Adap1DRun._marking` uses
+  `adaptdg.marking.dorfler_union_1d_adap` (exact adapter).
 - `adaptdg.transfer` (1D) and `adaptdg.transfer_2d`: conservative remap plans,
   extracted unchanged from ASRTM-PHREEQC (commit a152b91). `transfer_field` is still a stub.
 - `adaptdg.marking`: Dörfler marking core `dorfler_union` (min_size/epsilon/tie hooks,

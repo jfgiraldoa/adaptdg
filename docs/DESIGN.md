@@ -180,3 +180,20 @@ runs in one process). Limits: BE + DG1 history cannot run in the source either (
 case; the stagnation guard and nested/full transfer strategies of `solve_one_adaptive_transport_step_2d` were not exercised
 (the loop never enables them); CG1 degree 1 only.
 Tests: `tests/test_loop.py` (fake chemistry, no PHREEQC; dolfinx tests guarded with `importorskip`).
+
+## Piece 7: 1D RM operator and ADAP loop (done)
+Extracted from ASRTM-PHREEQC at commit a152b91 (`methods/onedim/rm1d.py` -> `adaptdg.rm_1d`,
+`methods/onedim/adap1d.py` -> `adaptdg.loop_1d`). Class and method names, numerics and operation order unchanged
+(`RMOperator1D`, `Adap1DRun`, `Adap1DSettings`, `dg1_to_cells`, `cells_to_dg1`, `positivity_fix`, `positivity_mixing`).
+Chemistry stays duck-typed exactly as in the source; the `Chemistry1D` protocol class only documents it:
+`snapshot.concentrations` (component -> chemistry-grid array, read once), `boundary[c]` (inflow) and
+`react(inputs, time_step=dt)` returning an object with `concentrations`. Nothing is enforced and adaptdg imports no
+chemistry. Deviations (outside numerics): the operator import points to `adaptdg.rm_1d`; `Adap1DRun._marking` calls
+`adaptdg.marking.dorfler_union_1d_adap` (the adapter built from this very method; verified equal against the inline
+original in `tests/test_loop_1d.py` and by full runs). A uniform mesh without adaptivity (Engesgaard driver) is
+`Adap1DSettings(initial_cells=N, first_step_solves=1, step_solves=1, coarsen_tol=-1.0, positivity="mixing")`.
+Both modules need only numpy/scipy; `import adaptdg` does not import them.
+Equality (throwaway script outside the repo): source `Adap1DRun` vs `adaptdg.loop_1d.Adap1DRun` with the source cation
+exchange chemistry, 60 steps, `np.array_equal` on 1020 arrays (solved edges, cell counts, transported, transported on
+the chemistry grid, reacted): 0 differences. Full-case equality through the asrtm-dg glue is documented in asrtm-dg.
+Tests: `tests/test_loop_1d.py` (fake decay chemistry, no PHREEQC).
