@@ -11,7 +11,8 @@ residual minimisation yields a stable, continuous solution and, at the same time
 **error estimator** that drives **adaptive mesh refinement** at each discrete time step.
 
 > **Status: pre-alpha, interface not stable.** The package is being extracted from
-> working research codes; most modules are stubs until that migration is finished.
+> working research codes; conservative mesh transfer (`transfer`, `transfer_2d`) is extracted; the other modules
+> are stubs until that migration is finished.
 
 ## History
 

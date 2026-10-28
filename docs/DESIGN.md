@@ -13,7 +13,8 @@ package imports without it.
   whenever the mesh changes. `water_volume()` is the conservation diagnostic.
 
 ## Extraction order
-1. Conservative mesh transfer.
+1. Conservative mesh transfer. **Done** (`transfer`, `transfer_2d` extracted from
+   ASRTM-PHREEQC at commit a152b91; `transfer_field` stays a stub).
 2. DG1 transport.
 3. Estimators and Dörfler marking.
 4. ADAP loop.
