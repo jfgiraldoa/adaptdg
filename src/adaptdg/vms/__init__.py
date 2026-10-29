@@ -7,14 +7,16 @@ dolfinx, ufl, basix or petsc4py: every heavy import happens inside the functions
 
 from adaptdg.vms.problems import (
     Anisotropic,
+    BurgersSingle,
     ErikssonJohnson,
     ErikssonJohnson3D,
     Fichera3D,
     Heterogeneous,
+    NonlinearProblem,
     PoissonSine,
     Problem,
     ReentrantCorner,
 )
 
-__all__ = ["Anisotropic", "ErikssonJohnson", "ErikssonJohnson3D", "Fichera3D", "Heterogeneous", "PoissonSine",
-           "Problem", "ReentrantCorner"]
+__all__ = ["Anisotropic", "BurgersSingle", "ErikssonJohnson", "ErikssonJohnson3D", "Fichera3D",
+           "Heterogeneous", "NonlinearProblem", "PoissonSine", "Problem", "ReentrantCorner"]

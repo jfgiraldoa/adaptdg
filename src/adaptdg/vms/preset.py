@@ -30,19 +30,29 @@ class Preset:
     marking_ratio: float | None = None
     #: "paper" ``b(eps', v)`` or "legacy" ``b(v, eps')`` in the reconstruction.
     adjoint_ordering: str | None = None
+    #: convective flux of nonlinear problems: "lax_friedrichs" (paper eqs. 45-47, conservative form) or "wind"
+    #: (legacy ``bh_dar_NL``: the wind ``f'(u)`` through the generic upwind form, non-conservative volume term).
+    nonlinear_flux: str = "lax_friedrichs"
+    #: Newton variant: "hybrid" (Gauss-Newton Jacobian far from the solution, full Jacobian near it, undamped) or
+    #: "damped" (legacy ``Damping_solve``: Gauss-Newton Jacobian, damping ``1/(1 + K |R|)``).
+    newton_method: str = "hybrid"
 
     def __post_init__(self) -> None:
         if self.marking not in ("dorfler", "fixed_fraction"):
             raise ValueError("marking must be 'dorfler' or 'fixed_fraction'")
         if self.adjoint_ordering not in (None, "paper", "legacy"):
             raise ValueError("adjoint_ordering must be None, 'paper' or 'legacy'")
+        if self.nonlinear_flux not in ("lax_friedrichs", "wind"):
+            raise ValueError("nonlinear_flux must be 'lax_friedrichs' or 'wind'")
+        if self.newton_method not in ("hybrid", "damped", "full"):
+            raise ValueError("newton_method must be 'hybrid', 'damped' or 'full'")
 
 
 PRESETS: dict[str, Preset] = {
     "paper": Preset(),
     "legacy": Preset(name="legacy", gram_l2=False, gamma_factor_b=0.5, gamma_factor_gram=0.5,
                      quadrature_degree=8, marking="fixed_fraction", marking_ratio=0.25,
-                     adjoint_ordering="legacy"),
+                     adjoint_ordering="legacy", nonlinear_flux="wind", newton_method="damped"),
 }
 
 

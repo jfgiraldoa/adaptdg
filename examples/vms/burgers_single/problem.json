@@ -1,0 +1,7 @@
+{
+  "name": "burgers_single",
+  "dim": 2,
+  "kappa": 0.01,
+  "kappa_full": [0.01, 0.001, 0.0001],
+  "initial_mesh_size": 4
+}

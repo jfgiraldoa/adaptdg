@@ -60,7 +60,8 @@ def error_targets(result: Any, problem: Any, p: int, *, degree: int = 8, vms: An
     out = {}
     for target in targets:
         ref = problem.exact(hq.x) if target == "exact" else project_exact(hq, problem, result.r.function_space)
-        out[target] = {name: _norms(hq, ref, fun) for name, fun in fields.items()}
+        out[target] = {name: _norms(hq, ref, fun) if fun is not None else (float("nan"), float("nan"))
+                       for name, fun in fields.items()}  # None: field not available (e.g. dG Newton failed)
     return out
 
 

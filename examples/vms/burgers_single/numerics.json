@@ -1,0 +1,23 @@
+{
+  "p": 3,
+  "tolref": 0.2,
+  "eta_0": 1.0,
+  "max_levels": 60,
+  "dofmax": 6000,
+  "tol": 0.0,
+  "solver": "mumps",
+  "quadrature_degree": 12,
+  "refinement": "adaptive",
+  "reconstruct": false,
+  "preset": "paper",
+  "error_targets": "exact",
+  "example": {
+    "degrees": {"short": [3], "full": [3]},
+    "kappa": {"short": [0.01, 0.001], "full": [0.01, 0.001, 0.0001]},
+    "dofmax": {"short": {"3": 5000}, "full": {"3": 20000}},
+    "presets": {
+      "paper": {"theta_ref": 0.25},
+      "legacy": {"newton": {"maxit": 500}}
+    }
+  }
+}

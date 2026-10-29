@@ -6,6 +6,13 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `adaptdg.vms.nonlinear`: nonlinear residual minimisation for `div f(u) - div(kappa grad u) = s` (paper section 6): conservative
+  dG forms with the Lax-Friedrichs flux (or the legacy wind form), the saddle point on `DG(p) x CG(p)` with the exact UFL
+  Jacobian, hybrid Newton (Gauss-Newton then full Jacobian, optional damped restart) and the legacy damped Newton, warm start
+  between adaptive levels, the nonlinear multiscale reconstruction and `NonlinearAdaptiveLoop` (a failed Newton level is
+  flagged, never fatal). New `Preset` fields `nonlinear_flux` and `newton_method`, `LoopSettings.newton` / `newton_fallback`,
+  `Problem.outflow_tags` / `has_exact`, `NonlinearProblem`, the problem `BurgersSingle` (section 6.5.2) and the example
+  `examples/vms/burgers_single` (shock at `x = 1/2`, both presets). Linear cases are unchanged.
 - History-preserving mesh rebuild (F2A) and fast path of the 2D adaptive loop: `run_adaptive_loop_2d(...,
   history_policy="f2a", fast=True)` keeps the DG1 reaction history across predictive-mesh rebuilds and in-step
   refinements (new modules `adaptdg.f2a`, `adaptdg.history_projection`, `adaptdg.history_projection_fast`,

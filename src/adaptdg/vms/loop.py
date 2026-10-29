@@ -38,6 +38,8 @@ class LoopSettings:
     preset_overrides: dict[str, Any] | None = None  # Preset fields to change, e.g. {"gram_l2": True}
     error_targets: str = "both"  # "both" | "exact": "both" adds the *_proj columns (L2 projection of u_exact)
     method: str = "rm"  # "rm" residual minimisation | "galerkin" plain CG(p) baseline (uniform refinement only)
+    newton: dict[str, Any] | None = None  # nonlinear problems: overrides of adaptdg.vms.nonlinear.NewtonOptions
+    newton_fallback: bool = False  # nonlinear problems: retry a failed level with the undamped hybrid Newton
     compare_galerkin: bool = False  # "rm" only: add L2_cg, Vh_cg (and *_proj) of CG(p) Galerkin on the same meshes
 
 

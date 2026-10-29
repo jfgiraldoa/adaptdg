@@ -26,6 +26,10 @@ class Problem:
     name = "problem"
     dim = 2
     dirichlet_tags: tuple[int, ...] = (1,)
+    #: tags of natural (outflow) boundary faces: no Dirichlet data, only used by the nonlinear forms.
+    outflow_tags: tuple[int, ...] = ()
+    #: False when the problem has no exact solution (the error targets are then not available).
+    has_exact = True
 
     def kappa(self, x: Any) -> Any:
         """Diffusivity: number, scalar UFL expression or (dim x dim) UFL tensor."""
@@ -316,6 +320,99 @@ class PoissonSine(Problem):
         return crossed_rectangle(n, (0.0, 0.0), (1.0, 1.0), comm)
 
 
+class NonlinearProblem(Problem):
+    """Interface of ``div(f(u)) - div(kappa grad u) = s`` (conservation law with diffusion, paper section 6).
+
+    Override ``flux``/``dflux`` (UFL vectors; ``d2flux`` for the legacy linearisation). ``beta`` returns the constant
+    *norm wind* of the Gram form (eq. 50, ``beta_inf = 1`` in the legacy code), not a convection velocity. The source
+    defaults to ``div f(u_D) - div(kappa grad u_D)`` for the exact solution ``u_D``; ``initial_guess`` is a numpy
+    callable on points of shape ``(3, N)``.
+    """
+
+    name = "nonlinear"
+    dim = 2
+
+    def flux(self, u: Any) -> Any:
+        """Convective flux ``f(u)`` (UFL vector)."""
+        raise NotImplementedError
+
+    def dflux(self, u: Any) -> Any:
+        """``f'(u)`` (UFL vector): the wind of the linearisation and of the Lax-Friedrichs dissipation."""
+        raise NotImplementedError
+
+    def d2flux(self, u: Any) -> Any:
+        """``f''(u)`` (UFL vector), used by the legacy (frozen-wind) linearisation."""
+        raise NotImplementedError
+
+    def source(self, x: Any) -> Any | None:
+        import ufl
+
+        u = self.exact(x)
+        return ufl.div(self.flux(u)) - ufl.div(self.kappa(x) * ufl.grad(u))
+
+    def initial_guess(self, x: np.ndarray) -> np.ndarray:
+        return np.full(x.shape[1], 0.5)
+
+
+@dataclass
+class BurgersSingle(NonlinearProblem):
+    """Single-component Burgers equation ``f(u) = (u^2/2, u)``, ``div f(u) = kappa Delta u`` on (0,1)^2 (section 6.5.2).
+
+    Dirichlet data ``u_D = 1 - 2x`` on ``y = 0``, ``x = 0``, ``x = 1`` (tags 3, 1, 2) and the zero-diffusive-flux
+    outflow boundary ``y = 1`` (tag 4, ``outflow_tags``); initial guess ``u0 = 1 - 2x``; no exact solution. The
+    shock sits at ``x = 1/2`` where ``u0`` changes sign (the paper text says ``x = 0``) with ``max |u_x| = 1/(2 kappa)``.
+    Defaults: ``kappa = 1e-2``, 4 x 4 start mesh, norm wind (1, 1).
+    """
+
+    diffusivity: float = 1.0e-2
+    norm_velocity: tuple[float, ...] = (1.0, 1.0)
+    name = "burgers_single"
+    dim = 2
+    dirichlet_tags: tuple[int, ...] = (1, 2, 3)
+    outflow_tags: tuple[int, ...] = (4,)
+    has_exact = False
+
+    def kappa(self, x: Any) -> Any:
+        return float(self.diffusivity)
+
+    def beta(self, x: Any) -> Any | None:
+        import ufl
+
+        return ufl.as_vector([float(v) for v in self.norm_velocity])
+
+    def flux(self, u: Any) -> Any:
+        import ufl
+
+        return ufl.as_vector([u * u / 2, u])
+
+    def dflux(self, u: Any) -> Any:
+        import ufl
+
+        return ufl.as_vector([u, 1.0])
+
+    def d2flux(self, u: Any) -> Any:
+        import ufl
+
+        return ufl.as_vector([1.0, 0.0])
+
+    def dirichlet(self, x: Any) -> Any:
+        return 1 - 2 * x[0]
+
+    def source(self, x: Any) -> Any | None:
+        return None
+
+    def initial_guess(self, x: np.ndarray) -> np.ndarray:
+        return 1 - 2 * x[0]
+
+    def boundary_markers(self) -> dict[int, Marker]:
+        return _box_markers(self.dim)
+
+    def initial_mesh(self, n: int, comm: Any = None) -> Any:
+        from adaptdg.vms.meshes import crossed_rectangle
+
+        return crossed_rectangle(n, (0.0, 0.0), (1.0, 1.0), comm)
+
+
 PROBLEMS: dict[str, type[Problem]] = {
     "reentrant_corner": ReentrantCorner,
     "fichera": Fichera3D,
@@ -324,4 +421,5 @@ PROBLEMS: dict[str, type[Problem]] = {
     "eriksson_johnson": ErikssonJohnson,
     "eriksson_johnson_3d": ErikssonJohnson3D,
     "poisson_sine": PoissonSine,
+    "burgers_single": BurgersSingle,
 }

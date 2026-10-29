@@ -68,7 +68,7 @@ suffix `_proj` against the projection (`LoopSettings.error_targets = "exact"` sk
 implementation uses `beta = (1, 0)`. The diffusivity of `Heterogeneous` is a DG0 tensor field (the SWIP weights need
 different values on the two sides of a facet) and its start mesh needs an even number of cells per side so that
 `x = 1/2` consists of mesh facets (preserved by bisection). `refinement = "uniform"` reproduces the original
-uniform runs. First release: Dirichlet boundaries only (no Neumann).
+uniform runs. Linear problems: Dirichlet boundaries only (the nonlinear forms add outflow faces, see the Burgers section).
 
 ## Fichera 3D
 
@@ -93,6 +93,59 @@ cube (`beta = (1, 0, 0)`, same solution, six faces); the original code only ran 
 paper preset): the mean cell size away from the layer is 12 times that in `x > 0.9`; the last-window Vh slope is about
 -1.3 (p = 1) and -2.2 (p = 2) against DoF^(1/2); at kappa = 1e-3 the uniform sequences do not resolve the layer.
 
+## Nonlinear problems: Burgers equation (section 6)
+
+`adaptdg.vms.nonlinear` solves `div(f(u)) - div(kappa grad u) = s` (eq. 43) with the same adaptive loop idea as the linear
+solver; `problems.NonlinearProblem` is the interface (`flux(u)`, `dflux(u)`, `d2flux(u)`, `initial_guess`, a source
+derived from the exact solution when there is one, `outflow_tags`, `has_exact`). The norm wind of the Gram form (eq. 50,
+legacy `beta_inf = 1`) is `Problem.beta`, a constant `(1, 1)`; it is not a convection velocity.
+`numerics.json` accepts `newton` (overrides of `nonlinear.NewtonOptions`) and `newton_fallback`.
+
+| Paper | Where | Content |
+|---|---|---|
+| (44)-(46) | `nonlinear.NonlinearForms.operator` | residual `N(v; u) = n_h(v; u) - l_h(v)`: SWIP diffusion, `-(grad v, f(u)) + ([[v]], Phi)` with the Lax-Friedrichs flux (interior `eta_f` = maximum of `|f'(u_i).n|` over both sides, Dirichlet faces `|f'(u).n|`) |
+| (48) | same | weak Dirichlet data and source; the part `-(v, f(u_D).n - eta_f u_D)/2` of the boundary flux is evaluated with the same `eta_f(u)`, so it is differentiated together with `n_h` |
+| -- | same | faces with no Dirichlet data (`outflow_tags`): `v f(u).n` (natural outflow, zero diffusive flux) |
+| (49)-(50) | `dgforms.DGForms.gram` | norm: SWIP norm plus `||w||_0^2 + sum ||[[w]]||_F^2 + sum h ||grad w||_K^2` (norm wind `(1, 1)`) |
+| (51) | `nonlinear.NonlinearRMSolver` | saddle point `g(w, eps) + N(w; ubar) = 0`, `n'(eps, v; ubar) = 0` on `DG(p) x CG(p)`; Jacobian by `ufl.derivative` (checked by finite differences in `tests/test_vms_burgers.py`) |
+| (53)-(54) | `nonlinear.newton_solve` | Newton iteration, see below; stopping at `|du|_Vh < 1e-9` or `|R| < 1e-11` (the paper says `1e-6`) |
+| (61)-(62) | `nonlinear.reconstruct_nonlinear` | `utilde`: `n'(v, utilde; ubar) = g(v, eps)`; `ucheck`: `... = g(v, eps) + n'(eps, v; ubar)`; `phi = ubar + ucheck`; `theta` = nonlinear dG solution by Newton from `ubar + utilde` |
+
+Warm start: `(eps, ubar)` are interpolated to the next mesh (`create_interpolation_data` / `interpolate_nonmatching`).
+A level where Newton fails is flagged in the history (`newton_status`, `newton_converged`) and the loop continues with the
+iterate of smallest residual; with `newton_fallback` such a level is retried with the hybrid solver.
+
+**Newton choices and why.** Unknowns `(eps, ubar)`; the residual is `F1 = g(w, eps) + N(w; ubar)` (rows of the `DG(p)` test
+functions) and `F2 = n'(eps, v; ubar)` (rows of the `CG(p)` ones); `|R|` is the Euclidean norm of both.
+* *Hybrid* (paper preset): Gauss-Newton Jacobian (the second derivative `n''` of `F2` is dropped) while `|R| >= 1e-3`, the full
+  Jacobian afterwards, undamped. The legacy damping together with the Gauss-Newton Jacobian fails on most levels of the
+  isotropic case because the dropped term is not small away from the solution, and the damped iteration then stops
+  at local minima of `|R|` where the Jacobian is singular; the undamped full Newton step escapes them. At small kappa the
+  single-component case needs the damping (undamped iterations stagnate): `damping_fallback` (default on) restarts a failed
+  level once from the same state with the legacy damping and `omega = 0.1`.
+* *Damped* (legacy preset): `Damping_solve` of the original code, `t = 1/(1 + K |R|)`, `K` x10 when `om = (1 - |R_new|/|R|)/t < 0.5`
+  and /10 after a success, tolerance 1e-12, `maxit` 20000; the original has no bound on `K`, here `K > 1e14` ends the level
+  (`failK`).
+
+**Presets.** `Preset.nonlinear_flux`: `"lax_friedrichs"` (paper, conservative) or `"wind"` (legacy `bh_dar_NL`: the wind
+`beta = f'(u)` through the generic upwind form with the non-conservative volume term `v beta.grad u`; its Jacobian is the legacy
+`bh_prima`, i.e. `v (beta.grad du + du f''(u).grad u)` with upwind faces frozen at `beta(u)`). `Preset.newton_method`:
+`"hybrid"` or `"damped"`. The adjoint ordering and the other fields behave as in the linear case. The legacy code's
+automatic-differentiation branch (`matrix_assembler.py`) builds the second block of the Newton matrix as a derivative of `n(v; u_k)`
+with the test and trial slots exchanged; it is not reproduced (both presets use `n'(eps, v; ubar)` of eq. 51).
+
+**Several roots.** On one mesh the discrete problem has several solutions. The root reached depends on the path (warm start,
+damping), and `||u - ubar||_0` changes by up to 50% between them while the estimator `E` agrees to 3-4 digits. Report `E` first;
+read single-level errors with care.
+
+### Single-component Burgers (6.5.2)
+
+`BurgersSingle` (`"burgers_single"`): `f(u) = (u^2/2, u)` on (0,1)^2, `u_D = 1 - 2x` on `y = 0, x = 0, 1` (tags 3, 1, 2),
+outflow `y = 1` (tag 4), initial guess `1 - 2x`, no exact solution, `kappa = 1e-2` (also `1e-3`, `1e-4`), `p = 3`, 4 x 4 start mesh.
+The shock is at `x = 1/2` (the paper text says `x = 0`: `u0 = 1 - 2x` changes sign at `1/2`), steepest slope about `-1/(2 kappa)`.
+Without the outflow term `v f(u).n` Newton fails at `p = 3`. See `examples/vms/burgers_single/` (README: measured Newton
+statistics, shock position and width, time and memory).
+
 ## Galerkin baseline (Poisson FEM)
 
 `galerkin.solve_galerkin(problem, mesh, p)` solves the standard conforming `CG(p)` Galerkin problem on the same `Problem`
@@ -109,8 +162,8 @@ L2 error and a Vh error 1.1-1.5 times larger than CG against the exact solution.
 
 ## Modules
 
-`problems` (`Problem`, `ReentrantCorner`, `Fichera3D`, `Heterogeneous`, `Anisotropic`, `ErikssonJohnson`,
-`ErikssonJohnson3D`, `PoissonSine`), `galerkin` (`solve_galerkin`, `galerkin_errors`), `meshes` (crossed-triangle L-shape, Fichera cube, unit cube, boundary tags), `dgforms`, `saddle` (`RMSolver`, `RMResult`), `refine`
+`problems` (`Problem`, `NonlinearProblem`, `ReentrantCorner`, `Fichera3D`, `Heterogeneous`, `Anisotropic`, `ErikssonJohnson`,
+`ErikssonJohnson3D`, `PoissonSine`, `BurgersSingle`), `nonlinear` (`NonlinearForms`, `NonlinearRMSolver`, `newton_solve`, `reconstruct_nonlinear`, `NonlinearAdaptiveLoop`), `galerkin` (`solve_galerkin`, `galerkin_errors`), `meshes` (crossed-triangle L-shape, Fichera cube, unit cube, boundary tags), `dgforms`, `saddle` (`RMSolver`, `RMResult`), `refine`
 (`refine_marked`, `refine_uniform`, any dimension), `norms` (`error_targets`, `error_norms`, `error_norms_vms`), `preset` (`Preset`, `resolve_preset`), `reconstruction` (`reconstruct`, `VMSResult`), `loop`
 (`AdaptiveStationaryLoop`, `LoopSettings`, `fitted_slope`) and `run` (`run_from_json`).
 

@@ -71,6 +71,7 @@ class DGForms:
         tags = tag_boundary(domain, problem.boundary_markers())
         self.dx, self.dS, self.ds = self._measures(2 * p + 2 if degree is None else degree, tags)
         self.dx_r, _, self.ds_r = self._measures(rhs_degree, tags)
+        self.ds_out = self._outflow_measure(2 * p + 2 if degree is None else degree, tags)
 
     def _measures(self, degree: int, tags: Any) -> tuple[Any, Any, Any]:
         import ufl
@@ -83,6 +84,16 @@ class DGForms:
         for tag in self.problem.dirichlet_tags:
             dsd = ds(tag) if dsd is None else dsd + ds(tag)
         return dx, dS, dsd
+
+    def _outflow_measure(self, degree: int, tags: Any) -> Any:
+        """Measure on the faces tagged ``Problem.outflow_tags`` (natural / outflow boundary), or ``None``."""
+        import ufl
+
+        ds = ufl.Measure("ds", domain=self.domain, subdomain_data=tags, metadata={"quadrature_degree": degree})
+        out = None
+        for tag in getattr(self.problem, "outflow_tags", ()):
+            out = ds(tag) if out is None else out + ds(tag)
+        return out
 
     # -- diffusion weights (SWIP) -------------------------------------------------------
     def _interior_weights(self) -> tuple[Any, Any, Any]:
@@ -99,6 +110,13 @@ class DGForms:
     # -- bilinear form (eqs. 7-9) ---------------------------------------------------------
     def b(self, v: Any, u: Any) -> Any:
         """``b_h(v, u)``: SWIP diffusion plus upwind advection (v test, u trial)."""
+        form = self.diffusion(v, u)
+        if self.beta is not None:
+            form += self._upwind(v, u)
+        return form
+
+    def diffusion(self, v: Any, u: Any) -> Any:
+        """SWIP diffusion part of ``b_h`` (eq. 8) on the Dirichlet faces; other boundary faces are natural."""
         import ufl
 
         n, eta = self.n, self.eta
@@ -114,8 +132,6 @@ class DGForms:
             - (v * ufl.dot(_flux(self.kappa, gu), n) + ufl.dot(_flux(self.kappa, gv), n) * u) * self.ds
             + eta * gam_b * v * u * self.ds
         )
-        if self.beta is not None:
-            form += self._upwind(v, u)
         return form
 
     def _upwind(self, v: Any, u: Any) -> Any:

@@ -1,7 +1,7 @@
 """JSON loader: ``run_from_json(problem_json, numerics_json)`` -> history CSV + result dict.
 
 problem.json keys (defaults in brackets): name ["reentrant_corner", "fichera", "heterogeneous",
-"anisotropic", "eriksson_johnson", "eriksson_johnson_3d", "poisson_sine"], kappa [1.0; 1e-2 for eriksson_johnson], beta [none; (1, 0) for heterogeneous], alpha [2/3, exponent of the exact
+"anisotropic", "eriksson_johnson", "eriksson_johnson_3d", "poisson_sine", "burgers_isotropic", "burgers_single"], kappa [1.0; 1e-2 for eriksson_johnson], beta [none; (1, 0) for heterogeneous], alpha [2/3, exponent of the exact
 solution; ``q`` for fichera, also accepted under the key ``q``], eps1/eps2 [0.1/1.0, heterogeneous], r/tau [1e4/1e-3, anisotropic],
 initial_mesh_size [4, even number of cells per side]. numerics.json keys: see :class:`~adaptdg.vms.loop.LoopSettings` (``eta_0`` is accepted for ``eta0``).
 """
@@ -14,8 +14,10 @@ from dataclasses import asdict, fields
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+
 from adaptdg.vms.loop import AdaptiveStationaryLoop, LoopSettings, fitted_slope
-from adaptdg.vms.problems import PROBLEMS, Problem
+from adaptdg.vms.problems import PROBLEMS, NonlinearProblem, Problem
 
 
 def _load(spec: Any) -> dict[str, Any]:
@@ -67,10 +69,16 @@ def run_from_json(problem_json: Any, numerics_json: Any, out_dir: Any = None,
     pspec, nspec = _load(problem_json), _load(numerics_json)
     nspec.update(overrides)
     problem, settings = build_problem(pspec), build_settings(nspec, pspec)
-    loop = AdaptiveStationaryLoop(problem, settings)
+    if isinstance(problem, NonlinearProblem):
+        from adaptdg.vms.nonlinear import NonlinearAdaptiveLoop
+
+        loop = NonlinearAdaptiveLoop(problem, settings)
+    else:
+        loop = AdaptiveStationaryLoop(problem, settings)
     history = loop.run(progress)
     d = problem.dim
-    keys = [k for k in history[0] if k not in ("level", "ndofs", "ncells", "time")]
+    skip = ("level", "ndofs", "ncells", "time", "umin", "umax")
+    keys = [k for k in history[0] if k not in skip and not k.startswith("newton") and np.isfinite(history[-1][k])]
     slopes = {k: fitted_slope(history, k, d) for k in keys} if len(history) > 3 else {}
     out: dict[str, Any] = {"history": history, "settings": asdict(settings), "slopes": slopes,
                            "csv": None, "mesh": None}
@@ -84,8 +92,6 @@ def run_from_json(problem_json: Any, numerics_json: Any, out_dir: Any = None,
             writer.writeheader()
             writer.writerows(history)
         out["mesh"] = folder / f"mesh_{stem}.npz"
-        import numpy as np
-
         geom = loop.domain.geometry
         np.savez(out["mesh"], x=geom.x, cells=geom.dofmaps[0])
     return out
