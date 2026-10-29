@@ -144,7 +144,26 @@ read single-level errors with care.
 outflow `y = 1` (tag 4), initial guess `1 - 2x`, no exact solution, `kappa = 1e-2` (also `1e-3`, `1e-4`), `p = 3`, 4 x 4 start mesh.
 The shock is at `x = 1/2` (the paper text says `x = 0`: `u0 = 1 - 2x` changes sign at `1/2`), steepest slope about `-1/(2 kappa)`.
 Without the outflow term `v f(u).n` Newton fails at `p = 3`. See `examples/vms/burgers_single/` (README: measured Newton
-statistics, shock position and width, time and memory).
+statistics, shock position and width, time and memory). Measured (paper preset, `p = 3`, about 21000-24000 DoF): `kappa = 1e-2`
+converges on 26 of 26 levels in 2-8 iterations (shock at `x = 0.499`, steepest slope -48.7 against the analytic -50, `ubar` within
+0.2% of `[-1, 1]`, `E` slope -3.4 against DoF^(1/2)); `kappa = 1e-3` converges on 16 of 16 (the first five levels need the damped
+restart; slope -495 against -500); `kappa = 1e-4` is not reproduced (5 of 15 levels converge, `ubar` overshoots to `[-1.9, 1.3]`,
+the shock is unresolved at this cap). The legacy preset converges on 15 of 15 levels at `kappa = 1e-2` and 7 of 13 at `kappa = 1e-3`
+(status `failK`, final `|R|` between 9e-11 and 4e-5).
+
+### Isotropic Burgers (6.5.1)
+
+`BurgersIsotropic` (`"burgers_isotropic"`): `div(b u^2/2) - kappa Delta u = f`, `b = (1, 1)`, `kappa = 1e-3`, exact solution
+`u = (1 - tanh((2x - y - 1/4)/sqrt(5 kappa)))/2`, `f` and the Dirichlet data (four sides) derived symbolically from it, initial guess
+0.5, 6 x 6 start mesh, norm wind `(1, 1)`. The history has both error targets (exact and DG(p) L2 projection) for `ubar`, `theta`,
+`u` and `phi` (`reconstruct`). See `examples/vms/burgers_isotropic/`. Measured (paper preset, `kappa = 1e-3`, 32000-49000 DoF): Newton
+converges on 28 of 28 levels at `p = 1` and `p = 3` and on 27 of 28 at `p = 2` (with `maxit = 400`; the library default 100 fails on
+4 of 24 levels at `p = 1`); slopes of `E` against DoF^(1/2) -1.1, -2.0, -3.2 for `p = 1, 2, 3` (pre-asymptotic at `p = 1`); `Vh` of
+`ubar` -1.6, -2.5, -4.0; `Vh(phi)/Vh(theta)` 0.97-0.98 against the exact solution and 0.85-0.94 against the projection; `L2` of
+`ubar` is path dependent and plateaus near 5e-5 at `p = 3` (cause not investigated). Legacy preset: Newton fails on 9/16, 9/15 and 6/17
+levels (`p = 1, 2, 3`, `failK`, final `|R|` 7.6e-12 to 2.4e-5) with `E` 1.2-1.3 times the paper preset's at equal DoF whether the level
+converged or not. `theta` is solved by the undamped exact-Jacobian Newton in both presets (`theta_converged` column; the legacy dG
+iteration fails on most levels).
 
 ## Galerkin baseline (Poisson FEM)
 
@@ -163,7 +182,7 @@ L2 error and a Vh error 1.1-1.5 times larger than CG against the exact solution.
 ## Modules
 
 `problems` (`Problem`, `NonlinearProblem`, `ReentrantCorner`, `Fichera3D`, `Heterogeneous`, `Anisotropic`, `ErikssonJohnson`,
-`ErikssonJohnson3D`, `PoissonSine`, `BurgersSingle`), `nonlinear` (`NonlinearForms`, `NonlinearRMSolver`, `newton_solve`, `reconstruct_nonlinear`, `NonlinearAdaptiveLoop`), `galerkin` (`solve_galerkin`, `galerkin_errors`), `meshes` (crossed-triangle L-shape, Fichera cube, unit cube, boundary tags), `dgforms`, `saddle` (`RMSolver`, `RMResult`), `refine`
+`ErikssonJohnson3D`, `PoissonSine`, `BurgersIsotropic`, `BurgersSingle`), `nonlinear` (`NonlinearForms`, `NonlinearRMSolver`, `newton_solve`, `reconstruct_nonlinear`, `NonlinearAdaptiveLoop`), `galerkin` (`solve_galerkin`, `galerkin_errors`), `meshes` (crossed-triangle L-shape, Fichera cube, unit cube, boundary tags), `dgforms`, `saddle` (`RMSolver`, `RMResult`), `refine`
 (`refine_marked`, `refine_uniform`, any dimension), `norms` (`error_targets`, `error_norms`, `error_norms_vms`), `preset` (`Preset`, `resolve_preset`), `reconstruction` (`reconstruct`, `VMSResult`), `loop`
 (`AdaptiveStationaryLoop`, `LoopSettings`, `fitted_slope`) and `run` (`run_from_json`).
 

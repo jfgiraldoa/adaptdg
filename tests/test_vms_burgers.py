@@ -11,11 +11,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from adaptdg.vms.problems import PROBLEMS, BurgersSingle, NonlinearProblem
+from adaptdg.vms.problems import PROBLEMS, BurgersIsotropic, BurgersSingle, NonlinearProblem
 from adaptdg.vms.run import build_problem, build_settings
 
 EXAMPLES = Path(__file__).resolve().parents[1] / "examples" / "vms"
 SINGLE = EXAMPLES / "burgers_single"
+ISO = EXAMPLES / "burgers_isotropic"
 
 
 @pytest.fixture(scope="module")
@@ -52,6 +53,7 @@ def test_import_nonlinear_is_lazy():
 
 def test_problem_registry_and_example_files():
     assert PROBLEMS["burgers_single"] is BurgersSingle and issubclass(BurgersSingle, NonlinearProblem)
+    assert PROBLEMS["burgers_isotropic"] is BurgersIsotropic and issubclass(BurgersIsotropic, NonlinearProblem)
     pspec = json.loads((SINGLE / "problem.json").read_text())
     numerics = json.loads((SINGLE / "numerics.json").read_text())
     prob = build_problem(pspec)
@@ -82,15 +84,17 @@ def test_preset_fields_of_the_nonlinear_choices():
         resolve_preset("paper", nonlinear_flux="x")
 
 
-@pytest.mark.parametrize("preset,p", [("paper", 1), ("paper", 2), ("legacy", 1)])
-def test_jacobian_matches_finite_differences(dolfinx_env, preset, p):
+@pytest.mark.parametrize("cls,preset,p", [(BurgersSingle, "paper", 1), (BurgersSingle, "paper", 2),
+                                          (BurgersSingle, "legacy", 1), (BurgersIsotropic, "paper", 1),
+                                          (BurgersIsotropic, "legacy", 1)])
+def test_jacobian_matches_finite_differences(dolfinx_env, cls, preset, p):
     from dolfinx.fem import petsc
     from petsc4py import PETSc
 
     import dolfinx.fem as fem
     from adaptdg.vms.nonlinear import NonlinearRMSolver
 
-    prob = BurgersSingle(diffusivity=1e-2)
+    prob = cls(diffusivity=1e-2)
     s = NonlinearRMSolver(prob, p, preset=preset).system(prob.initial_mesh(2))
     rng = np.random.default_rng(0)
     n = s.sol.x.array.size
@@ -211,3 +215,98 @@ def test_example_run_script_summarises_the_newton_statistics():
             {"newton_converged": 0, "newton_iterations": 100, "newton_fallback": 1, "newton_status": "maxit"}]
     out = module.newton_summary(hist)
     assert out["converged"] == 1 and out["failed_levels"] == [2] and out["fallback_levels"] == [2]
+
+
+# -- isotropic Burgers (section 6.5.1) -----------------------------------------------------------------------------
+def test_isotropic_example_files():
+    pspec = json.loads((ISO / "problem.json").read_text())
+    numerics = json.loads((ISO / "numerics.json").read_text())
+    prob = build_problem(pspec)
+    assert isinstance(prob, BurgersIsotropic) and prob.has_exact and prob.diffusivity == pytest.approx(1e-3)
+    assert prob.velocity == (1.0, 1.0) and prob.dirichlet_tags == (1, 2, 3, 4) and prob.outflow_tags == ()
+    assert pspec["initial_mesh_size"] == 6 and numerics["reconstruct"] and numerics["error_targets"] == "both"
+    for preset in ("paper", "legacy"):
+        nspec = {k: v for k, v in numerics.items() if k != "example"}
+        nspec.update(numerics["example"]["presets"][preset], preset=preset)
+        s = build_settings(nspec, pspec)
+        assert s.preset == preset and s.initial_mesh_size == 6 and s.newton["maxit"] == 400
+    assert prob.initial_guess(np.zeros((3, 4))).tolist() == [0.5] * 4  # constant initial guess
+
+
+@pytest.mark.parametrize("kappa", [1e-3, 1e-2])
+def test_isotropic_source_is_consistent_with_the_exact_solution(dolfinx_env, kappa):
+    import ufl
+    from dolfinx import fem, mesh
+
+    prob = BurgersIsotropic(diffusivity=kappa)
+    dom = prob.initial_mesh(6)
+    x = ufl.SpatialCoordinate(dom)
+    ncells = dom.topology.index_map(2).size_local
+    cells = np.arange(ncells, dtype=np.int32)
+    centre = mesh.compute_midpoints(dom, 2, cells)[:, :2]
+    ref = np.array([[1.0 / 3.0, 1.0 / 3.0]])  # centroids of the cells
+    vals = {}
+    for name, expr in (("f", prob.source(x)), ("u", prob.exact(x)), ("uD", prob.dirichlet(x))):
+        vals[name] = fem.Expression(expr, ref).eval(dom, cells).ravel()
+    delta = np.sqrt(5 * kappa)
+    s = 2 * centre[:, 0] - centre[:, 1] - 0.25  # u = u(s), b . grad s = 1, |grad s|^2 = 5
+    t = np.tanh(s / delta)
+    u, du, d2u = 0.5 * (1 - t), -(1 - t**2) / (2 * delta), t * (1 - t**2) / delta**2
+    np.testing.assert_allclose(vals["u"], u, atol=1e-12)
+    np.testing.assert_allclose(vals["uD"], u, atol=1e-12)
+    np.testing.assert_allclose(vals["f"], u * du - 5 * kappa * d2u, rtol=1e-9, atol=1e-9)  # div(b u^2/2) - kappa Lap u
+
+
+def test_isotropic_both_targets_and_reconstruction_columns_in_both_presets(dolfinx_env):
+    for preset in ("paper", "legacy"):
+        pspec, nspec = _settings(preset, 3, p=1, example=ISO)
+        loop = _loop(pspec, nspec)
+        row = loop.history[-1]
+        for key in ("E", "L2", "Vh", "L2_proj", "Vh_proj", "Vh_phi", "Vh_phi_proj", "L2_u"):
+            assert np.isfinite(row[key]) and row[key] > 0, (preset, key)
+        for key in ("Vh_theta", "Vh_theta_proj", "L2_theta"):  # NaN exactly when the dG Newton for theta failed
+            assert np.isfinite(row[key]) == bool(row["theta_converged"]), (preset, key)
+            assert preset == "legacy" or row["theta_converged"]  # the paper preset converges on these levels
+        assert row["newton_status"] in ("conv", "failK", "maxit", "diverged", "singular")
+        assert loop.history[-1]["E"] < loop.history[0]["E"]
+
+
+def test_isotropic_paper_newton_converges_and_errors_decrease(dolfinx_env):
+    pspec, nspec = _settings("paper", 12, p=1, example=ISO)
+    loop = _loop(pspec, nspec)
+    assert all(r["newton_converged"] and r["newton_residual"] < 1e-9 for r in loop.history)
+    h = loop.history
+    assert h[-1]["Vh"] < 0.5 * h[0]["Vh"] and h[-1]["L2"] < 0.5 * h[0]["L2"] and h[-1]["E"] < 0.5 * h[0]["E"]
+    assert all(r["theta_converged"] for r in h)
+    assert -0.45 < min(r["umin"] for r in h) and max(r["umax"] for r in h) < 1.1  # bounded, no large oscillation
+    assert h[-1]["Vh_theta"] < h[-1]["Vh"]  # the nonlinear dG solution is the more accurate one on the same mesh
+
+
+def test_isotropic_legacy_preset_records_failures_without_raising(dolfinx_env):
+    pspec, nspec = _settings("legacy", 5, p=1, example=ISO)
+    nspec["newton"] = {"maxit": 60}
+    loop = _loop(pspec, nspec)
+    assert len(loop.history) == 5
+    assert all(np.isfinite(r["L2"]) and np.isfinite(r["E"]) for r in loop.history)
+    stat = {r["newton_status"] for r in loop.history}
+    assert stat <= {"conv", "failK", "maxit", "diverged", "singular"}
+
+
+def test_isotropic_adaptive_mesh_clusters_along_the_layer(dolfinx_env):
+    pspec, nspec = _settings("paper", 10, p=1, example=ISO)
+    loop = _loop(pspec, nspec)
+    d = loop.domain
+    n = d.topology.index_map(2).size_local
+    xyz = d.geometry.x[d.geometry.dofmaps[0][:n]]
+    h = np.sqrt(np.abs(np.linalg.det(xyz[:, 1:, :2] - xyz[:, :1, :2])) / 2)
+    mid = xyz[:, :, :2].mean(axis=1)
+    dist = np.abs(2 * mid[:, 0] - mid[:, 1] - 0.25) / np.sqrt(5.0)
+    assert h[dist > 0.2].mean() / h[dist < 0.03].mean() > 3.0
+
+
+def test_run_from_json_dispatches_to_the_nonlinear_loop(dolfinx_env, tmp_path):
+    from adaptdg.vms.run import run_from_json
+
+    pspec, nspec = _settings("paper", 4, p=1, example=ISO)
+    out = run_from_json(pspec, nspec, tmp_path, progress=None)
+    assert out["csv"].exists() and "Vh" in out["slopes"] and not any(k.startswith("newton") for k in out["slopes"])

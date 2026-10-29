@@ -355,6 +355,59 @@ class NonlinearProblem(Problem):
 
 
 @dataclass
+class BurgersIsotropic(NonlinearProblem):
+    """Isotropic Burgers equation ``div(b u^2/2) - kappa Delta u = f`` on (0,1)^2 (paper section 6.5.1, eq. 63).
+
+    ``b = (1, 1)``, ``kappa = 1e-3``, exact solution ``u = (1 - tanh((2x - y - 1/4)/sqrt(5 kappa)))/2`` (an inner layer
+    along the line ``2x - y = 1/4``), ``f`` and the Dirichlet data on the four sides derived from it, initial guess 0.5.
+    The norm wind of the Gram form is ``norm_velocity = (1, 1)`` (legacy ``beta_inf = 1``). Start mesh: 6 x 6.
+    """
+
+    diffusivity: float = 1.0e-3
+    velocity: tuple[float, ...] = (1.0, 1.0)
+    norm_velocity: tuple[float, ...] = (1.0, 1.0)
+    name = "burgers_isotropic"
+    dim = 2
+    dirichlet_tags: tuple[int, ...] = (1, 2, 3, 4)
+
+    def kappa(self, x: Any) -> Any:
+        return float(self.diffusivity)
+
+    def beta(self, x: Any) -> Any | None:
+        import ufl
+
+        return ufl.as_vector([float(v) for v in self.norm_velocity])
+
+    def flux(self, u: Any) -> Any:
+        import ufl
+
+        return ufl.as_vector([float(v) for v in self.velocity]) * (u * u / 2)
+
+    def dflux(self, u: Any) -> Any:
+        import ufl
+
+        return ufl.as_vector([float(v) for v in self.velocity]) * u
+
+    def d2flux(self, u: Any) -> Any:
+        import ufl
+
+        return ufl.as_vector([float(v) for v in self.velocity])
+
+    def exact(self, x: Any) -> Any:
+        import ufl
+
+        return 0.5 * (1 - ufl.tanh((2 * x[0] - x[1] - 0.25) / float(np.sqrt(5 * self.diffusivity))))
+
+    def boundary_markers(self) -> dict[int, Marker]:
+        return _box_markers(self.dim)
+
+    def initial_mesh(self, n: int, comm: Any = None) -> Any:
+        from adaptdg.vms.meshes import crossed_rectangle
+
+        return crossed_rectangle(n, (0.0, 0.0), (1.0, 1.0), comm)
+
+
+@dataclass
 class BurgersSingle(NonlinearProblem):
     """Single-component Burgers equation ``f(u) = (u^2/2, u)``, ``div f(u) = kappa Delta u`` on (0,1)^2 (section 6.5.2).
 
@@ -421,5 +474,6 @@ PROBLEMS: dict[str, type[Problem]] = {
     "eriksson_johnson": ErikssonJohnson,
     "eriksson_johnson_3d": ErikssonJohnson3D,
     "poisson_sine": PoissonSine,
+    "burgers_isotropic": BurgersIsotropic,
     "burgers_single": BurgersSingle,
 }

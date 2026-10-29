@@ -439,7 +439,9 @@ def solve_dg(forms: NonlinearForms, u0: Any, opts: NewtonOptions, solver: str = 
 def reconstruct_nonlinear(result: NonlinearRMResult, *, adjoint_ordering: str = "paper", solver: str = "mumps",
                           newton: NewtonOptions | None = None) -> Any:
     """``utilde`` (eq. 61), ``ucheck`` (eq. 62), ``phi = ubar + ucheck`` and the dG solution ``theta`` (Newton from
-    ``ubar + utilde``; ``theta`` is ``None`` when that Newton iteration fails). Returns a
+    ``ubar + utilde`` with the undamped exact-Jacobian Newton in both presets (the same iteration as the hybrid one
+    for the paper preset), because the legacy damped dG iteration fails on most levels;
+    ``theta`` is ``None`` when that Newton iteration fails). Returns a
     :class:`~adaptdg.vms.reconstruction.VMSResult` (``u_full = ubar + utilde``, an approximation of ``theta``)."""
     if adjoint_ordering not in ("paper", "legacy"):
         raise ValueError("adjoint_ordering must be 'paper' or 'legacy'")
@@ -479,7 +481,7 @@ def reconstruct_nonlinear(result: NonlinearRMResult, *, adjoint_ordering: str = 
     full.x.array[:] = ub.x.array + out["utilde"].x.array
     phi = fem.Function(space, name="phi")
     phi.x.array[:] = ub.x.array + out["ucheck"].x.array
-    theta, info = solve_dg(forms, full, newton or NewtonOptions(), solver)
+    theta, info = solve_dg(forms, full, newton or NewtonOptions(method="full"), solver)
     return VMSResult(result.ubar, out["utilde"], out["ucheck"], phi, theta if info.converged else None, full,
                      adjoint_ordering)
 
@@ -530,7 +532,8 @@ class NonlinearAdaptiveLoop:
     Uses ``LoopSettings`` (``newton`` = dict of :class:`NewtonOptions` overrides, ``newton_fallback``: when the
     preset's Newton fails, retry the level with the undamped hybrid solver). Rows carry ``newton_iterations``,
     ``newton_failed_steps``, ``newton_residual``, ``newton_converged`` (0/1), ``newton_status``, the nodal
-    ``umin``/``umax`` of ``ubar`` and, for problems with an exact solution, the error columns of the linear loop.
+    ``umin``/``umax`` of ``ubar``, ``theta_converged`` (with ``reconstruct``: the dG Newton iteration for ``theta``
+    converged; otherwise the ``*_theta`` columns are NaN) and, for problems with an exact solution, the error columns of the linear loop.
     """
 
     def __init__(self, problem: Any, settings: Any, domain: Any = None) -> None:
@@ -588,6 +591,8 @@ class NonlinearAdaptiveLoop:
                    "newton_residual": info["residual"], "newton_converged": int(info["converged"]),
                    "newton_status": info["status"], "newton_fallback": used_fallback,
                    "umin": float(nodal.min()), "umax": float(nodal.max())}
+            if s.reconstruct:
+                row["theta_converged"] = int(self.vms.theta is not None)
             self.history.append({**row, "time": time.time() - t0})
             if progress:
                 err = f" L2={cols['L2']:.3e} Vh={cols['Vh']:.3e}" if "L2" in cols else ""

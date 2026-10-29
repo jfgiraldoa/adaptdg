@@ -6,6 +6,8 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `examples/vms/burgers_isotropic` (paper section 6.5.1) and the problem `BurgersIsotropic`: manufactured tanh layer, both error
+  targets, `ubar`/`theta`/`u`/`phi` errors with the nonlinear reconstruction, both presets; `theta_converged` column.
 - `adaptdg.vms.nonlinear`: nonlinear residual minimisation for `div f(u) - div(kappa grad u) = s` (paper section 6): conservative
   dG forms with the Lax-Friedrichs flux (or the legacy wind form), the saddle point on `DG(p) x CG(p)` with the exact UFL
   Jacobian, hybrid Newton (Gauss-Newton then full Jacobian, optional damped restart) and the legacy damped Newton, warm start

@@ -1,0 +1,7 @@
+{
+  "name": "burgers_isotropic",
+  "dim": 2,
+  "kappa": 0.001,
+  "beta": [1.0, 1.0],
+  "initial_mesh_size": 6
+}

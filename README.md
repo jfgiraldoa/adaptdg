@@ -37,6 +37,8 @@ problems, and time-dependent transport runs with adaptive meshes in 1D and 2D.
   `python run.py` takes about 15 s.
 - `examples/vms/burgers_single`: single-component Burgers equation with a shock layer (nonlinear residual minimisation,
   hybrid Newton); `python run.py` takes about 10 s (`--full`: about 3 min per preset, up to 1 GB).
+- `examples/vms/burgers_isotropic`: isotropic Burgers equation with a manufactured tanh layer, both error targets;
+  `python run.py` takes about 30 s (`--full`: about 5 min per preset, up to 3.5 GB).
 
 Each example reads `problem.json` and `numerics.json`.
 
@@ -72,8 +74,7 @@ backend and couples the PHREEQC chemistry; adaptdg itself has no chemistry.
 
 adaptdg continues AS-FEM. The original FEniCS 2019 code and its benchmarks are kept in the git tag
 `asfem-legacy`. Port status: Poisson / re-entrant corner, heterogeneous, anisotropic, Fichera, the Poisson FEM baseline and the steady
-Eriksson-Johnson problem (2D and 3D) and the single-component Burgers equation are ported; the isotropic Burgers and the
-unsteady Eriksson-Johnson cases are pending.
+Eriksson-Johnson problem (2D and 3D) and both Burgers equations are ported; the unsteady Eriksson-Johnson cases are pending.
 
 ## How to cite
 
