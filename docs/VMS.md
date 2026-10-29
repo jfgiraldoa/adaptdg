@@ -97,8 +97,11 @@ paper preset): the mean cell size away from the layer is 12 times that in `x > 0
 
 `adaptdg.vms.nonlinear` solves `div(f(u)) - div(kappa grad u) = s` (eq. 43) with the same adaptive loop idea as the linear
 solver; `problems.NonlinearProblem` is the interface (`flux(u)`, `dflux(u)`, `d2flux(u)`, `initial_guess`, a source
-derived from the exact solution when there is one, `outflow_tags`, `has_exact`). The norm wind of the Gram form (eq. 50,
-legacy `beta_inf = 1`) is `Problem.beta`, a constant `(1, 1)`; it is not a convection velocity.
+derived from the exact solution when there is one, `outflow_tags`, `has_exact`). `NonlinearProblem.norm_form` selects the Gram
+form: `"streamline"` (the form of the linear problems; the norm wind of eq. 50, legacy `beta_inf = 1`, is `Problem.beta`, a
+constant `(1, 1)`, not a convection velocity) or `"isotropic"` (eqs. 49-50 as written: `(w, w) + sum_F ||[[w]]||_F^2 +
+sum_K h_K ||grad w||_K^2`, no wind). `BurgersSingle` uses the isotropic form (`norm_form` in `problem.json`), `BurgersIsotropic`
+the streamline form.
 `numerics.json` accepts `newton` (overrides of `nonlinear.NewtonOptions`) and `newton_fallback`.
 
 | Paper | Where | Content |
@@ -106,9 +109,9 @@ legacy `beta_inf = 1`) is `Problem.beta`, a constant `(1, 1)`; it is not a conve
 | (44)-(46) | `nonlinear.NonlinearForms.operator` | residual `N(v; u) = n_h(v; u) - l_h(v)`: SWIP diffusion, `-(grad v, f(u)) + ([[v]], Phi)` with the Lax-Friedrichs flux (interior `eta_f` = maximum of `|f'(u_i).n|` over both sides, Dirichlet faces `|f'(u).n|`) |
 | (48) | same | weak Dirichlet data and source; the part `-(v, f(u_D).n - eta_f u_D)/2` of the boundary flux is evaluated with the same `eta_f(u)`, so it is differentiated together with `n_h` |
 | -- | same | faces with no Dirichlet data (`outflow_tags`): `v f(u).n` (natural outflow, zero diffusive flux) |
-| (49)-(50) | `dgforms.DGForms.gram` | norm: SWIP norm plus `||w||_0^2 + sum ||[[w]]||_F^2 + sum h ||grad w||_K^2` (norm wind `(1, 1)`) |
+| (49)-(50) | `nonlinear.NonlinearForms.gram` (`dgforms.DGForms.gram` for `norm_form = "streamline"`) | norm: SWIP norm plus `||w||_0^2 + sum ||[[w]]||_F^2 + sum h ||grad w||_K^2` (isotropic) or its streamline version with the norm wind `(1, 1)` |
 | (51) | `nonlinear.NonlinearRMSolver` | saddle point `g(w, eps) + N(w; ubar) = 0`, `n'(eps, v; ubar) = 0` on `DG(p) x CG(p)`; Jacobian by `ufl.derivative` (checked by finite differences in `tests/test_vms_burgers.py`) |
-| (53)-(54) | `nonlinear.newton_solve` | Newton iteration, see below; stopping at `|du|_Vh < 1e-9` or `|R| < 1e-11` (the paper says `1e-6`) |
+| (53)-(54) | `nonlinear.newton_solve` | Newton iteration with relaxation `k` (backtracking), see below; stopping at `|du|_Vh < 1e-9` or `|R| < 1e-11` (the paper says `1e-6` for the increment; stricter here, about one more quadratic iteration) |
 | (61)-(62) | `nonlinear.reconstruct_nonlinear` | `utilde`: `n'(v, utilde; ubar) = g(v, eps)`; `ucheck`: `... = g(v, eps) + n'(eps, v; ubar)`; `phi = ubar + ucheck`; `theta` = nonlinear dG solution by Newton from `ubar + utilde` |
 
 Warm start: `(eps, ubar)` are interpolated to the next mesh (`create_interpolation_data` / `interpolate_nonmatching`).
@@ -118,11 +121,20 @@ iterate of smallest residual; with `newton_fallback` such a level is retried wit
 **Newton choices and why.** Unknowns `(eps, ubar)`; the residual is `F1 = g(w, eps) + N(w; ubar)` (rows of the `DG(p)` test
 functions) and `F2 = n'(eps, v; ubar)` (rows of the `CG(p)` ones); `|R|` is the Euclidean norm of both.
 * *Hybrid* (paper preset): Gauss-Newton Jacobian (the second derivative `n''` of `F2` is dropped) while `|R| >= 1e-3`, the full
-  Jacobian afterwards, undamped. The legacy damping together with the Gauss-Newton Jacobian fails on most levels of the
-  isotropic case because the dropped term is not small away from the solution, and the damped iteration then stops
-  at local minima of `|R|` where the Jacobian is singular; the undamped full Newton step escapes them. At small kappa the
-  single-component case needs the damping (undamped iterations stagnate): `damping_fallback` (default on) restarts a failed
-  level once from the same state with the legacy damping and `omega = 0.1`.
+  Jacobian afterwards, with Armijo backtracking on `|R|` (`damping="backtrack"`: `t = 1, 1/2, ...` until
+  `|R_new| < (1 - 1e-4 t)|R|`; the relaxation `k` of eq. 54). A full-Jacobian step that needs `t < 1/4` is replaced by the
+  Gauss-Newton step (the full Jacobian misses the kink of `|f'(u).n|` at the shock, so it is exact only near the root). The
+  iteration ends as `stalled` when no step above `1e-4` decreases `|R|`. The legacy damping together with the Gauss-Newton
+  Jacobian fails on most levels of the isotropic case because the dropped term is not small away from the solution, and the
+  damped iteration then stops at local minima of `|R|` where the Jacobian is singular. Undamped iterations (`damping="none"`) stagnate
+  on the coarse levels at small kappa (100+ steps); with `damping="none"` the old `damping_fallback` (one restart with the
+  legacy damping and `omega = 0.1`) is still available.
+* *Retries* (paper preset, `NewtonOptions.cold_retry`, `continuation`): a level whose iteration fails from the warm start is
+  retried from the initial guess (`eps = 0`, `problem.initial_guess`); if that fails too and the system has at most
+  `continuation_max_dofs = 20000` unknowns, by continuation in `kappa` (`continuation_start = 1e-2`, ratio 3.16, reduced by a
+  square root when a stage fails; needs `problem.diffusivity`). The first mesh of the single-component case at `kappa <= 1e-3`
+  needs the continuation (5-7 stages, 40-80 iterations); later levels rarely need the cold retry. Neither retry exists in the legacy
+  preset.
 * *Damped* (legacy preset): `Damping_solve` of the original code, `t = 1/(1 + K |R|)`, `K` x10 when `om = (1 - |R_new|/|R|)/t < 0.5`
   and /10 after a success, tolerance 1e-12, `maxit` 20000; the original has no bound on `K`, here `K > 1e14` ends the level
   (`failK`).
@@ -143,13 +155,16 @@ read single-level errors with care.
 `BurgersSingle` (`"burgers_single"`): `f(u) = (u^2/2, u)` on (0,1)^2, `u_D = 1 - 2x` on `y = 0, x = 0, 1` (tags 3, 1, 2),
 outflow `y = 1` (tag 4), initial guess `1 - 2x`, no exact solution, `kappa = 1e-2` (also `1e-3`, `1e-4`), `p = 3`, 4 x 4 start mesh.
 The shock is at `x = 1/2` (the paper text says `x = 0`: `u0 = 1 - 2x` changes sign at `1/2`), steepest slope about `-1/(2 kappa)`.
-Without the outflow term `v f(u).n` Newton fails at `p = 3`. See `examples/vms/burgers_single/` (README: measured Newton
-statistics, shock position and width, time and memory). Measured (paper preset, `p = 3`, about 21000-24000 DoF): `kappa = 1e-2`
-converges on 26 of 26 levels in 2-8 iterations (shock at `x = 0.499`, steepest slope -48.7 against the analytic -50, `ubar` within
-0.2% of `[-1, 1]`, `E` slope -3.4 against DoF^(1/2)); `kappa = 1e-3` converges on 16 of 16 (the first five levels need the damped
-restart; slope -495 against -500); `kappa = 1e-4` is not reproduced (5 of 15 levels converge, `ubar` overshoots to `[-1.9, 1.3]`,
-the shock is unresolved at this cap). The legacy preset converges on 15 of 15 levels at `kappa = 1e-2` and 7 of 13 at `kappa = 1e-3`
-(status `failK`, final `|R|` between 9e-11 and 4e-5).
+Without the outflow term `v f(u).n` Newton converges to a wrong solution (`E` 6 times larger). The norm is the isotropic one of
+eqs. (49)-(50) (`norm_form = "isotropic"`); the streamline form with the wind `(1, 1)` makes Newton fail on most levels at
+`kappa = 1e-4`. See `examples/vms/burgers_single/` (README: paper parameters versus the example, measured Newton statistics, shock
+position and width, time and memory). Measured (`python run.py --full`, `p = 3`, 4 x 4 start mesh, cap 50000 DoF, about 1 minute
+and 1.5 GB for the paper preset): `kappa = 1e-2` converges on 32 of 32 levels (shock at `x = 0.500`, steepest slope -48.7 against
+the analytic -50, width 0.036); `kappa = 1e-3` on 20 of 20 (slope -515 against -500); `kappa = 1e-4` on 18 of 18 (slope -4442
+against -5000, width 0.0004 against 0.00035; the layer is resolved from about 32000 DoF on, `ubar` within `[-1.2, 1.2]`). The
+slope is measured on a refined window (the 2001-point line saturates near -2000 at `kappa = 1e-4`). The legacy preset (strict
+tolerance 1e-12) converges on 18 of 21, 12 of 18 and 3 of 14 levels (`failK`, mostly with `|R| < 1e-6`) and reaches the same
+shock (slope -4227 at 59000 DoF).
 
 ### Isotropic Burgers (6.5.1)
 

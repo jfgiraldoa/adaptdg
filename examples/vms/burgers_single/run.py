@@ -2,7 +2,7 @@
 
 Usage: python run.py [--full] [--preset paper|legacy] [--degrees 3 ...] [--kappa K ...] [--dofmax N]
 The short run (p = 3, kappa in {1e-2, 1e-3}, about 5000 DoF, under a minute) is the default; --full runs kappa in
-{1e-2, 1e-3, 1e-4} up to 20000 DoF (overnight batch). Results go to ./out/<preset>/: one CSV per run
+{1e-2, 1e-3, 1e-4} up to 50000 DoF (about one minute with the paper preset). Results go to ./out/<preset>/: one CSV per run
 (history_k<kappa>_p<p>.csv: level, ndofs, E, Newton iterations / residual / status, min and max of ubar, time),
 mesh_*.npz (last mesh), field_*.npz (nodal values of the last ubar and its profiles along y = 0.25, 0.75) and summary.json (Newton statistics, shock position,
 steepest slope and width on the line y = 0.75, cell-size clustering, time, peak memory). There is no exact solution:

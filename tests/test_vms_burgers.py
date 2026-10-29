@@ -169,10 +169,15 @@ def test_outflow_term_is_necessary(dolfinx_env):
     class NoOutflow(BurgersSingle):
         outflow_tags: tuple = ()
 
-    with_out = NonlinearRMSolver(BurgersSingle(), 3).solve(BurgersSingle().initial_mesh(4))
-    assert with_out.newton["converged"] and with_out.newton["residual"] < 1e-9
-    without = NonlinearRMSolver(NoOutflow(), 3).solve(NoOutflow().initial_mesh(4))  # the natural flux v f(u).n is missing
-    assert not without.newton["converged"] and without.newton["residual"] > 1e-6
+    dom = BurgersSingle().initial_mesh(4)
+    with_out = NonlinearRMSolver(BurgersSingle(), 3).solve(dom)
+    assert with_out.newton["converged"] and with_out.newton["residual"] < 1e-9 and with_out.newton["iterations"] <= 12
+    # the natural flux v f(u).n is missing: Newton still converges (more slowly) but to a different, much worse solution
+    no_cont = {"continuation": False}
+    without = NonlinearRMSolver(NoOutflow(), 3, newton=no_cont).solve(dom)
+    assert without.newton["iterations"] > 2 * with_out.newton["iterations"]
+    assert without.E > 3 * with_out.E
+    assert np.abs(without.ubar.x.array - with_out.ubar.x.array).max() > 0.3
 
 
 def test_shock_at_one_half_with_the_viscous_slope(dolfinx_env):
@@ -215,6 +220,93 @@ def test_example_run_script_summarises_the_newton_statistics():
             {"newton_converged": 0, "newton_iterations": 100, "newton_fallback": 1, "newton_status": "maxit"}]
     out = module.newton_summary(hist)
     assert out["converged"] == 1 and out["failed_levels"] == [2] and out["fallback_levels"] == [2]
+
+
+# -- Newton globalisation and the norm of eqs. (49)-(50) (section 6.5.2 at small kappa) ------------------------------
+def test_newton_damping_kinds_and_defaults():
+    from adaptdg.vms.nonlinear import NewtonOptions, newton_options
+
+    assert newton_options("paper").damping_kind == "backtrack" and newton_options("legacy").damping_kind == "legacy"
+    assert NewtonOptions(method="full").damping_kind == "none" and NewtonOptions(damping="none").damping_kind == "none"
+    paper, legacy = newton_options("paper"), newton_options("legacy")
+    assert paper.continuation and paper.cold_retry and not legacy.continuation and not legacy.cold_retry
+    with pytest.raises(ValueError):
+        NewtonOptions(damping="x")
+
+
+def test_single_example_files_use_the_isotropic_norm():
+    pspec = json.loads((SINGLE / "problem.json").read_text())
+    assert build_problem(pspec).norm_form == "isotropic" and BurgersIsotropic().norm_form == "streamline"
+    assert build_problem({**pspec, "norm_form": "streamline"}).norm_form == "streamline"
+    numerics = json.loads((SINGLE / "numerics.json").read_text())
+    assert numerics["example"]["dofmax"]["full"]["3"] >= 40000 and numerics["example"]["kappa"]["full"][-1] == 1e-4
+
+
+def test_isotropic_gram_is_eq_50(dolfinx_env):
+    """Gram form of eqs. (49)-(50) for a continuous w: (w, w) + int_dOmega w^2 + sum h_K |grad w|^2 (+ SWIP terms ~ kappa)."""
+    import basix.ufl
+    import ufl
+    from dolfinx import fem
+
+    from adaptdg.vms.nonlinear import NonlinearForms
+
+    vals = {}
+    for norm in ("isotropic", "streamline"):
+        prob = BurgersSingle(diffusivity=1e-14, norm_form=norm)
+        dom = prob.initial_mesh(4)
+        w = fem.Function(fem.functionspace(dom, basix.ufl.element("Lagrange", dom.basix_cell(), 1)))
+        w.interpolate(lambda x: x[0] - x[1])  # beta . grad w = 0 for the norm wind (1, 1): the streamline term is blind
+        forms = NonlinearForms(dom, prob, 1)
+        vals[norm] = fem.assemble_scalar(fem.form(forms.gram(w, w)))
+        if norm == "isotropic":
+            h = ufl.CellDiameter(dom)
+            ref = fem.assemble_scalar(fem.form(w * w * ufl.dx + w * w * ufl.ds + h * ufl.inner(ufl.grad(w), ufl.grad(w)) * ufl.dx))
+            assert vals[norm] == pytest.approx(ref, rel=1e-6)
+    assert vals["isotropic"] > vals["streamline"]
+
+
+def test_continuation_rescues_the_cold_start_at_kappa_1e3(dolfinx_env):
+    """First mesh at kappa = 1e-3: the backtracking Newton stalls (|R| ~ 1e-3), the undamped one does not reach 1e-9 in
+    100 steps; the retry by continuation in kappa converges."""
+    from adaptdg.vms.nonlinear import NonlinearRMSolver
+
+    prob = BurgersSingle(diffusivity=1e-3)
+    dom = prob.initial_mesh(4)
+    res = NonlinearRMSolver(prob, 3).solve(dom)
+    assert res.newton["converged"] and res.newton["residual"] < 1e-9 and res.newton["attempts"] > 1
+    stalled = NonlinearRMSolver(prob, 3, newton={"continuation": False}).solve(dom)
+    assert stalled.newton["status"] == "stalled" and stalled.newton["residual"] > 1e-5
+    plain = NonlinearRMSolver(prob, 3, newton={"damping": "none", "damping_fallback": False, "continuation": False,
+                                               "maxit": 100}).solve(dom)
+    assert not plain.newton["converged"]
+
+
+def test_kappa_1e3_converges_and_resolves_the_shock(dolfinx_env):
+    from adaptdg.vms.nonlinear import shock_diagnostics
+
+    pspec, nspec = _settings("paper", 16, p=3, error_targets="exact")
+    nspec["dofmax"] = 14000
+    loop = _loop(pspec, nspec, kappa=1e-3)
+    assert all(r["newton_converged"] for r in loop.history)
+    shock = shock_diagnostics(loop.result.ubar, y=0.75)
+    assert abs(shock["position"] - 0.5) < 0.005 and shock["crossings"] == 1
+    assert abs(shock["max_slope"] / (-1 / (2 * 1e-3)) - 1) < 0.2  # analytic viscous profile, within 20%
+    assert shock["u_min"] > -1.15 and shock["u_max"] < 1.15
+
+
+def test_kappa_1e4_converges_on_every_level_and_sharpens_the_shock(dolfinx_env):
+    """Reduced kappa = 1e-4 run (paper start mesh, 10 levels, ~6000 DoF): the streamline norm wind (1, 1) fails Newton
+    on most of these levels; the first mesh needs the continuation and one level the cold retry."""
+    from adaptdg.vms.nonlinear import shock_diagnostics
+
+    pspec, nspec = _settings("paper", 10, p=3, error_targets="exact")
+    loop = _loop(pspec, nspec, kappa=1e-4)
+    assert all(r["newton_converged"] for r in loop.history)
+    shock = shock_diagnostics(loop.result.ubar, y=0.75)
+    assert abs(shock["position"] - 0.5) < 0.02 and shock["crossings"] == 1
+    assert shock["max_slope"] < -500  # sampled on a refined window: 10% of the analytic -5000 at 6000 DoF
+    assert shock["u_min"] > -1.35 and shock["u_max"] < 1.35
+    assert loop.history[-1]["E"] < 0.5 * loop.history[0]["E"]
 
 
 # -- isotropic Burgers (section 6.5.1) -----------------------------------------------------------------------------

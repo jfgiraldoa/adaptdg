@@ -10,7 +10,8 @@
   ``DG(p) x CG(p)`` in the unknowns ``(eps, ubar)``; the Jacobian is the exact ``ufl.derivative`` of the residual.
 * eqs. (53)-(54): :func:`newton_solve` -- ``method="hybrid"`` (default of the paper preset): Gauss-Newton Jacobian
   (the second derivative ``n''`` of the second equation is dropped) until ``|R| < switch``, full Jacobian afterwards,
-  undamped; ``method="damped"`` (legacy preset): Gauss-Newton Jacobian with the legacy damping
+  with Armijo backtracking on ``|R|`` (``damping="backtrack"``, ``t`` = 1, 1/2, ... as the relaxation ``k`` of eq. 54;
+  the full-Jacobian step falls back to the Gauss-Newton one when it needs ``t < 1/4``); ``method="damped"`` (legacy preset): Gauss-Newton Jacobian with the legacy damping
   ``t = 1/(1 + K |R|)``, ``K`` multiplied by 10 on failure and divided by 10 on success; ``method="full"``.
 * eqs. (61)-(62): :func:`reconstruct_nonlinear` -- ``utilde`` from ``n'(v, utilde; ubar) = g(v, eps)``, the adjoint
   reconstruction ``n'(v, ucheck; ubar) = g(v, eps) + n'(eps, v; ubar)`` and the nonlinear dG solution ``theta`` (Newton).
@@ -61,6 +62,28 @@ class NonlinearForms(DGForms):
         if f is not None:
             form -= v * f * self.dx_r
         return form
+
+    def gram(self, a: Any, c: Any, weight: Any = None) -> Any:
+        """Gram form of the norm ``V_h``. ``problem.norm_form == "isotropic"``: eqs. (49)-(50), SWIP part plus
+        ``(a, c) + sum_F ([[a]], [[c]])_F + sum_K h_K (grad a, grad c)_K`` (all faces, no wind); otherwise the
+        streamline form of the linear problems (:meth:`DGForms.gram` with the norm wind ``problem.beta``)."""
+        if getattr(self.problem, "norm_form", "streamline") != "isotropic":
+            return super().gram(a, c, weight)
+        import ufl
+        from adaptdg.vms.dgforms import _flux, _normal_kappa
+
+        n, eta = self.n, self.eta
+        wc = 1.0 if weight is None else weight
+        wf = 1.0 if weight is None else ufl.avg(weight)
+        gam = self._interior_weights()[2] * self.preset.gamma_factor_gram
+        gam_b = _normal_kappa(self.kappa, n)
+        h = ufl.CellDiameter(self.domain)
+        ds_all = ufl.Measure("ds", domain=self.domain, metadata=self.dx.metadata())
+        return (ufl.inner(ufl.grad(a), _flux(self.kappa, ufl.grad(c))) * wc * self.dx
+                + ufl.avg(eta) * gam * ufl.inner(ufl.jump(a, n), ufl.jump(c, n)) * wf * self.dS
+                + eta * gam_b * a * c * wc * self.ds
+                + a * c * wc * self.dx + ufl.jump(a) * ufl.jump(c) * wf * self.dS + a * c * wc * ds_all
+                + h * ufl.inner(ufl.grad(a), ufl.grad(c)) * wc * self.dx)
 
     def _lf_convection(self, v: Any, u: Any, uD: Any) -> Any:
         """Eqs. (45)-(48): ``-(grad v, f(u)) + ([[v]], Phi)`` with Lax-Friedrichs ``Phi`` and the outflow term."""
@@ -137,23 +160,45 @@ class NewtonOptions:
     maxit: int = 100
     #: hybrid: Gauss-Newton Jacobian while ``|R| >= switch``, full Jacobian afterwards.
     switch: float = 1e-3
-    #: ``None`` -> ``"legacy"`` for method ``"damped"``, ``"none"`` otherwise; ``"legacy"``: ``t = 1/(1 + K |R|)``.
+    #: ``None`` -> ``"legacy"`` for method ``"damped"``, ``"backtrack"`` for ``"hybrid"``, ``"none"`` for ``"full"``;
+    #: ``"legacy"``: ``t = 1/(1 + K |R|)``; ``"backtrack"``: ``t`` = 1, 1/2, 1/4, ... until ``|R_new| < (1 - c t) |R|``.
     damping: str | None = None
     omega: float = 0.5  # legacy acceptance threshold on om = (1 - |R_new|/|R|)/t
+    armijo: float = 1e-4  # backtracking: sufficient decrease constant c
+    t_min: float = 1e-4  # backtracking: give up (status "stalled") when no direction accepts a step above this
+    #: hybrid + backtracking, ``|R| < switch``: the full-Jacobian step is accepted only if ``t >= t_full``, otherwise the
+    #: Gauss-Newton step is tried (the full Jacobian misses the kink of ``|f'(u).n|`` at the shock: exact near the root only).
+    t_full: float = 0.25
     k_max: float = 1e14  # legacy: give up when K exceeds this (the original loop would continue)
     diverge: float = 1e8  # undamped iterations stop when |R| exceeds this
     #: hybrid only: if the undamped iteration fails, restart from the same initial state with the legacy damping
     #: (``omega_fallback``); needed for the single-component case at small kappa (see docs/VMS.md).
     damping_fallback: bool = True
     omega_fallback: float = 0.1
+    #: a failed solve from a warm start is retried once from the initial guess (``eps = 0``, ``problem.initial_guess``);
+    #: if that fails too (and the system has at most ``continuation_max_dofs`` unknowns) it is retried by continuation in the
+    #: diffusivity (``problem.diffusivity``): solve at
+    #: ``continuation_start`` and decrease ``kappa`` by ``continuation_ratio`` per stage (the ratio is reduced when a stage
+    #: fails); needed for the cold start of the first mesh at ``kappa = 1e-4``.
+    continuation: bool = True
+    continuation_start: float = 1e-2
+    continuation_ratio: float = 3.16
+    continuation_max_dofs: int = 20000
+    cold_retry: bool = True
 
     def __post_init__(self) -> None:
         if self.method not in ("hybrid", "damped", "full"):
             raise ValueError("Newton method must be 'hybrid', 'damped' or 'full'")
+        if self.damping not in (None, "none", "legacy", "backtrack"):
+            raise ValueError("damping must be None, 'none', 'legacy' or 'backtrack'")
+
+    @property
+    def damping_kind(self) -> str:
+        return self.damping or {"damped": "legacy", "hybrid": "backtrack"}.get(self.method, "none")
 
     @property
     def legacy_damping(self) -> bool:
-        return (self.damping or ("legacy" if self.method == "damped" else "none")) == "legacy"
+        return self.damping_kind == "legacy"
 
 
 def newton_options(preset: Any, overrides: dict[str, Any] | None = None) -> NewtonOptions:
@@ -162,7 +207,7 @@ def newton_options(preset: Any, overrides: dict[str, Any] | None = None) -> Newt
 
     preset = resolve_preset(preset)
     if preset.newton_method == "damped":
-        base = NewtonOptions(method="damped", tol_du=1e-12, tol_res=1e-12, maxit=20000)
+        base = NewtonOptions(method="damped", tol_du=1e-12, tol_res=1e-12, maxit=20000, continuation=False, cold_retry=False)
     else:
         base = NewtonOptions(method=preset.newton_method)
     return replace(base, **overrides) if overrides else base
@@ -170,7 +215,7 @@ def newton_options(preset: Any, overrides: dict[str, Any] | None = None) -> Newt
 
 @dataclass
 class NewtonInfo:
-    """Outcome of one Newton solve (``status``: conv | already | maxit | failK | diverged | singular)."""
+    """Outcome of one Newton solve (``status``: conv | already | maxit | failK | stalled | diverged | singular)."""
 
     status: str = "none"
     converged: bool = False
@@ -190,7 +235,7 @@ def newton_solve(sol: Any, residual: Any, jacobian: Callable[[str], Any], increm
     """:func:`_newton` plus, for ``method == "hybrid"`` with ``damping_fallback``, a damped restart after a failure."""
     start = sol.x.array.copy()
     info = _newton(sol, residual, jacobian, increment_norm, opts, solver)
-    if info.converged or opts.method != "hybrid" or not opts.damping_fallback:
+    if info.converged or opts.method != "hybrid" or not opts.damping_fallback or opts.damping_kind == "backtrack":
         return info
     sol.x.array[:] = start
     sol.x.scatter_forward()
@@ -210,6 +255,8 @@ def _newton(sol: Any, residual: Any, jacobian: Callable[[str], Any], increment_n
     ``increment_norm(delta)`` the Vh norm of an increment. On failure ``sol`` is restored to the iterate with the
     smallest residual (the failure stays flagged in the returned info).
     """
+    if opts.damping_kind == "backtrack":
+        return _newton_backtrack(sol, residual, jacobian, increment_norm, opts, solver)
     from dolfinx.fem import petsc
     from mpi4py import MPI
     from petsc4py import PETSc
@@ -293,6 +340,110 @@ def _newton(sol: Any, residual: Any, jacobian: Callable[[str], Any], increment_n
     return info
 
 
+def _newton_backtrack(sol: Any, residual: Any, jacobian: Callable[[str], Any],
+                      increment_norm: Callable[[np.ndarray], float], opts: NewtonOptions,
+                      solver: str = "mumps") -> NewtonInfo:
+    """Newton iteration with Armijo backtracking on ``|R|`` (see :func:`_newton` for the arguments).
+
+    Far from the root (``|R| >= switch``) the Gauss-Newton direction is used; closer, the full-Jacobian direction is tried
+    first and accepted if ``t >= t_full``, otherwise the Gauss-Newton direction is used (and the full one is not tried
+    again until ``|R|`` has dropped by a factor 10). The iteration stops with ``stalled`` when no step above ``t_min`` gives
+    a sufficient decrease.
+    """
+    from dolfinx.fem import petsc
+    from mpi4py import MPI
+    from petsc4py import PETSc
+
+    def res_norm() -> float:
+        b = petsc.assemble_vector(residual)
+        b.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        val = float(b.norm())
+        b.destroy()
+        return val
+
+    def direction(kind: str) -> np.ndarray | None:
+        A = petsc.assemble_matrix(jacobian(kind))
+        A.assemble()
+        rhs = petsc.assemble_vector(residual)
+        rhs.ghostUpdate(addv=PETSc.InsertMode.ADD, mode=PETSc.ScatterMode.REVERSE)
+        rhs.scale(-1.0)
+        ksp.setOperators(A)
+        dvec = A.createVecRight()
+        try:
+            ksp.solve(rhs, dvec)
+            delta = dvec.array.copy()
+        except PETSc.Error:
+            delta = None
+        for obj in (A, rhs, dvec):
+            obj.destroy()
+        return delta if delta is not None and np.isfinite(delta).all() else None
+
+    info = NewtonInfo()
+    info.residual0 = info.residual = nres = res_norm()
+    if nres < opts.tol_res:
+        info.status, info.converged = "already", True
+        return info
+    ksp = PETSc.KSP().create(MPI.COMM_SELF)
+    ksp.setType("preonly")
+    ksp.getPC().setType("lu")
+    ksp.getPC().setFactorSolverType(solver)
+    best, best_x, status, gn_until = nres, sol.x.array.copy(), "maxit", np.inf
+    while info.iterations < opts.maxit:
+        x0 = sol.x.array.copy()
+        if opts.method == "full":
+            kinds = ["full"]
+        elif opts.method == "hybrid" and nres < min(opts.switch, gn_until):
+            kinds = ["full", "gn"]
+        else:
+            kinds = ["gn"]
+        accepted = None
+        for i, kind in enumerate(kinds):
+            sol.x.array[:] = x0
+            sol.x.scatter_forward()
+            delta = direction(kind)
+            if delta is None:
+                continue
+            floor = opts.t_full if i < len(kinds) - 1 else opts.t_min
+            t = 1.0
+            while t >= floor:
+                sol.x.array[:] = x0 + t * delta
+                sol.x.scatter_forward()
+                nres1 = res_norm()
+                if nres1 < (1.0 - opts.armijo * t) * nres:
+                    accepted = (kind, t, delta, nres1)
+                    break
+                info.failed_steps += 1
+                t /= 2.0
+            if accepted:
+                break
+            if kind == "full" and len(kinds) > 1:
+                gn_until = nres / 10.0
+        if accepted is None:
+            sol.x.array[:] = x0
+            sol.x.scatter_forward()
+            status = "stalled"
+            break
+        _, t, delta, nres = accepted
+        info.iterations += 1
+        info.increment = increment_norm(t * delta)
+        info.residual = nres
+        if nres < best:
+            best, best_x = nres, sol.x.array.copy()
+        if info.increment < opts.tol_du or nres < opts.tol_res:
+            status = "conv"
+            break
+        if not np.isfinite(nres) or nres > opts.diverge:
+            status = "diverged"
+            break
+    ksp.destroy()
+    info.status, info.converged = status, status == "conv"
+    if not info.converged:  # keep the best iterate; the flag records the failure
+        sol.x.array[:] = best_x
+        sol.x.scatter_forward()
+        info.residual = best
+    return info
+
+
 # --------------------------------------------------------------------------------------------------
 # Saddle point
 # --------------------------------------------------------------------------------------------------
@@ -333,16 +484,17 @@ class NonlinearRMSolver:
         self.quadrature_degree, self.solver = quadrature_degree, solver
         self.newton = newton if isinstance(newton, NewtonOptions) else newton_options(self.preset, newton)
 
-    def system(self, domain: Any, guess: tuple[Any, Any] | None = None) -> SimpleNamespace:
+    def system(self, domain: Any, guess: tuple[Any, Any] | None = None, problem: Any = None) -> SimpleNamespace:
         """Forms and initial state of the saddle point on ``domain``: ``sol`` (mixed Function with the start state),
         ``residual`` (UFL form ``F1 + F2``), ``jacobian(kind)`` (compiled, ``"gn"`` or ``"full"``), the dof maps
         ``map_r``/``map_c``, ``increment_norm`` and the spaces. ``guess = (eps, ubar)`` (Functions on another or the
-        same mesh) warm-starts, otherwise ``eps = 0`` and ``ubar = problem.initial_guess``."""
+        same mesh) warm-starts, otherwise ``eps = 0`` and ``ubar = problem.initial_guess``; ``problem`` replaces
+        ``self.problem`` (continuation in the diffusivity)."""
         import basix.ufl
         import ufl
         from dolfinx import fem
 
-        p, problem = self.p, self.problem
+        p, problem = self.p, problem or self.problem
         forms = NonlinearForms(domain, problem, p, eta0=self.eta0, rhs_degree=self.quadrature_degree,
                                preset=self.preset)
         cell = domain.basix_cell()
@@ -354,8 +506,11 @@ class NonlinearRMSolver:
         if guess is None:
             ub0.interpolate(problem.initial_guess)
         else:
-            _transfer(guess[0], eps0)
-            _transfer(guess[1], ub0)
+            for old, new in zip(guess, (eps0, ub0), strict=True):
+                if old.function_space.mesh is domain:  # same mesh: copy (interpolation would mix DG values at facets)
+                    new.x.array[:] = old.x.array
+                else:
+                    _transfer(old, new)
         sol.x.array[map_r], sol.x.array[map_c] = eps0.x.array, ub0.x.array
 
         r, u = ufl.split(sol)
@@ -388,19 +543,70 @@ class NonlinearRMSolver:
         return SimpleNamespace(forms=forms, space=W, sol=sol, residual=total, jacobian=jacobian,
                                increment_norm=increment_norm, map_r=map_r, map_c=map_c, Vr=Vr, Vc=Vc)
 
+    def _continuation(self, domain: Any, guess: Any, opts: NewtonOptions) -> tuple[Any, NewtonInfo | None]:
+        """Solve at ``kappa = continuation_start`` and lower ``kappa`` stage by stage down to the one of the problem;
+        returns the system and the info of the last stage (``(None, None)`` if a stage fails with the smallest ratio).
+        The iterations of all stages are added up in ``info.iterations``."""
+        from dataclasses import replace as dc_replace
+
+        from dolfinx import fem
+
+        target = float(self.problem.diffusivity)
+        kappa, ratio, total, stages, state, prev = max(opts.continuation_start, target), opts.continuation_ratio, 0, 0, guess, None
+        while True:
+            s = self.system(domain, state, dc_replace(self.problem, diffusivity=kappa))
+            info = newton_solve(s.sol, fem.form(s.residual), s.jacobian, s.increment_norm, opts, self.solver)
+            total, stages = total + info.iterations, stages + 1
+            if not info.converged:
+                if prev is None or ratio < 1.2:
+                    return None, None
+                ratio = ratio ** 0.5  # retry from the last converged stage with a smaller decrease of kappa
+                kappa, state = max(target, prev[0] / ratio), prev[1]
+                continue
+            state = self._state(s)
+            prev = (kappa, state)
+            if kappa <= target:
+                break
+            kappa = max(target, kappa / ratio)
+        info.iterations, info.attempts = total, stages
+        return s, info
+
+    def _state(self, s: Any) -> tuple[Any, Any]:
+        """``(eps, ubar)`` Functions holding the current iterate of the system ``s``."""
+        from dolfinx import fem
+
+        r_fun, ub_fun = fem.Function(s.Vr), fem.Function(s.Vc)
+        r_fun.x.array[:], ub_fun.x.array[:] = s.sol.x.array[s.map_r], s.sol.x.array[s.map_c]
+        return r_fun, ub_fun
+
     def solve(self, domain: Any, guess: tuple[Any, Any] | None = None,
               newton: NewtonOptions | None = None) -> NonlinearRMResult:
         """Solve on ``domain`` (see :meth:`system` for ``guess``)."""
         from dolfinx import fem
 
+        opts = newton or self.newton
         s = self.system(domain, guess)
-        info = newton_solve(s.sol, fem.form(s.residual), s.jacobian, s.increment_norm, newton or self.newton,
-                            self.solver)
+        info = newton_solve(s.sol, fem.form(s.residual), s.jacobian, s.increment_norm, opts, self.solver)
+        total, attempts = info.iterations, 1
+        if not info.converged and guess is not None and opts.cold_retry:  # a bad warm start: retry from the initial guess
+            s2 = self.system(domain, None)
+            info2 = newton_solve(s2.sol, fem.form(s2.residual), s2.jacobian, s2.increment_norm, opts, self.solver)
+            total, attempts = total + info2.iterations, attempts + 1
+            if info2.converged or info2.residual < info.residual:
+                s, info = s2, info2
+        ndofs = s.space.dofmap.index_map.size_global * s.space.dofmap.index_map_bs
+        if (not info.converged and opts.continuation and hasattr(self.problem, "diffusivity")
+                and ndofs <= opts.continuation_max_dofs):
+            s3, info3 = self._continuation(domain, None, opts)
+            if info3 is not None:
+                total, attempts = total + info3.iterations, attempts + info3.attempts
+                if info3.converged:
+                    s, info = s3, info3
+        info.iterations, info.attempts = total, max(info.attempts, attempts)
         r_fun, ub_fun = fem.Function(s.Vr, name="eps"), fem.Function(s.Vc, name="ubar")
         r_fun.x.array[:], ub_fun.x.array[:] = s.sol.x.array[s.map_r], s.sol.x.array[s.map_c]
         forms = s.forms
         ind = np.abs(cell_values(domain, forms.gram(r_fun, r_fun, _dg0_test(domain))))
-        ndofs = s.space.dofmap.index_map.size_global * s.space.dofmap.index_map_bs
         return NonlinearRMResult(r_fun, ub_fun, int(ndofs), ind, float(np.sqrt(ind.sum())), forms, info.as_dict())
 
 
@@ -506,20 +712,35 @@ def line_values(func: Any, xs: np.ndarray, y: float) -> np.ndarray:
     return vals
 
 
-def shock_diagnostics(ubar: Any, y: float = 0.75, samples: int = 2001) -> dict[str, float]:
+def shock_diagnostics(ubar: Any, y: float = 0.75, samples: int = 2001, window: float = 0.05) -> dict[str, float]:
     """Position (zero crossing of ``u`` nearest to ``x = 1/2``), steepest slope ``min u_x`` and full width at half
-    maximum of ``-u_x`` of the shock of ``ubar`` along the line ``y``."""
+    maximum of ``-u_x`` of the shock of ``ubar`` along the line ``y``. The steepest point is first found on
+    ``samples`` points of ``[0, 1]``; the slope is then taken on ``2 samples`` points of a narrow window around it
+    and the width on ``2 samples`` points of ``[x - window, x + window]`` (a coarse line underestimates a layer
+    thinner than its spacing, e.g. ``kappa = 1e-4`` against ``dx = 5e-4``)."""
     xs = np.linspace(0.0, 1.0, samples)
     u = line_values(ubar, xs, y)
-    ux = np.gradient(u, xs)
-    cross = xs[:-1][np.diff(np.sign(u)) != 0]
+    k = int(np.nanargmin(np.gradient(u, xs)))
+
+    def profile(half: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        xf = np.linspace(max(0.0, xs[k] - half), min(1.0, xs[k] + half), 2 * samples)
+        uf = line_values(ubar, xf, y)
+        return xf, uf, np.gradient(uf, xf)
+
+    xn, un, uxn = profile(0.1 * window)
+    xf, uf, uxf = profile(window)
+    kn = int(np.nanargmin(uxn))
+    kf = int(np.nanargmin(uxf))
+    cross = xf[:-1][np.diff(np.sign(uf)) != 0]
+    if not len(cross):
+        cross = xs[:-1][np.diff(np.sign(u)) != 0]
     pos = float(cross[np.argmin(abs(cross - 0.5))]) if len(cross) else float("nan")
-    k = int(np.nanargmin(ux))
-    half = -ux < 0.5 * -ux[k]
-    left = xs[:k][half[:k]]
-    right = xs[k:][half[k:]]
+    half = -uxf < 0.5 * -uxn[kn]
+    left = xf[:kf][half[:kf]]
+    right = xf[kf:][half[kf:]]
     width = float(right[0] - left[-1]) if len(left) and len(right) else float("nan")
-    return {"position": pos, "max_slope": float(ux[k]), "width_fwhm": width, "crossings": int(len(cross)),
+    ncross = int(np.count_nonzero(np.diff(np.sign(u)) != 0))
+    return {"position": pos, "max_slope": float(uxn[kn]), "width_fwhm": width, "crossings": ncross,
             "u_min": float(np.nanmin(u)), "u_max": float(np.nanmax(u))}
 
 
@@ -531,7 +752,7 @@ class NonlinearAdaptiveLoop:
 
     Uses ``LoopSettings`` (``newton`` = dict of :class:`NewtonOptions` overrides, ``newton_fallback``: when the
     preset's Newton fails, retry the level with the undamped hybrid solver). Rows carry ``newton_iterations``,
-    ``newton_failed_steps``, ``newton_residual``, ``newton_converged`` (0/1), ``newton_status``, the nodal
+    ``newton_failed_steps``, ``newton_residual``, ``newton_increment`` (last ``|du|_Vh``), ``newton_converged`` (0/1), ``newton_status``, the nodal
     ``umin``/``umax`` of ``ubar``, ``theta_converged`` (with ``reconstruct``: the dG Newton iteration for ``theta``
     converged; otherwise the ``*_theta`` columns are NaN) and, for problems with an exact solution, the error columns of the linear loop.
     """
@@ -588,7 +809,8 @@ class NonlinearAdaptiveLoop:
             info = res.newton
             row = {"level": level, "ndofs": res.ndofs, "ncells": int(ncells), **cols,
                    "newton_iterations": info["iterations"], "newton_failed_steps": info["failed_steps"],
-                   "newton_residual": info["residual"], "newton_converged": int(info["converged"]),
+                   "newton_residual": info["residual"], "newton_increment": info["increment"],
+                   "newton_converged": int(info["converged"]),
                    "newton_status": info["status"], "newton_fallback": used_fallback,
                    "umin": float(nodal.min()), "umax": float(nodal.max())}
             if s.reconstruct:

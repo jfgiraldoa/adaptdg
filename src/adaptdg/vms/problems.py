@@ -331,6 +331,9 @@ class NonlinearProblem(Problem):
 
     name = "nonlinear"
     dim = 2
+    #: Gram form of the nonlinear norm: "streamline" (linear-problem form with the norm wind ``beta``) or "isotropic"
+    #: (eqs. 49-50: L2, face jumps and ``h_K |grad w|^2``, no wind).
+    norm_form = "streamline"
 
     def flux(self, u: Any) -> Any:
         """Convective flux ``f(u)`` (UFL vector)."""
@@ -414,11 +417,13 @@ class BurgersSingle(NonlinearProblem):
     Dirichlet data ``u_D = 1 - 2x`` on ``y = 0``, ``x = 0``, ``x = 1`` (tags 3, 1, 2) and the zero-diffusive-flux
     outflow boundary ``y = 1`` (tag 4, ``outflow_tags``); initial guess ``u0 = 1 - 2x``; no exact solution. The
     shock sits at ``x = 1/2`` where ``u0`` changes sign (the paper text says ``x = 0``) with ``max |u_x| = 1/(2 kappa)``.
-    Defaults: ``kappa = 1e-2``, 4 x 4 start mesh, norm wind (1, 1).
+    Defaults: ``kappa = 1e-2``, 4 x 4 start mesh, isotropic norm of eqs. (49)-(50); ``norm_form="streamline"`` selects the
+    norm wind (``norm_velocity`` = (1, 1)) of the linear problems, which makes Newton fail at ``kappa = 1e-4``.
     """
 
     diffusivity: float = 1.0e-2
     norm_velocity: tuple[float, ...] = (1.0, 1.0)
+    norm_form: str = "isotropic"
     name = "burgers_single"
     dim = 2
     dirichlet_tags: tuple[int, ...] = (1, 2, 3)

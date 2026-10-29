@@ -55,6 +55,17 @@ versioning: Semantic Versioning.
 - `CITATION.cff`, project URLs and keywords in `pyproject.toml`.
 
 ### Changed
+- `adaptdg.vms` single-component Burgers (6.5.2) at small kappa: `BurgersSingle` now uses the norm of eqs. (49)-(50)
+  (`norm_form = "isotropic"`: `(w, w) + sum ||[[w]]||_F^2 + sum h_K ||grad w||_K^2`, no wind; `"streamline"` restores the old
+  Gram form with the norm wind (1, 1), still used by `BurgersIsotropic`). With the old form Newton failed on 10 of 15 levels
+  at `kappa = 1e-4`; now `python run.py --full` converges on every level at `kappa = 1e-2, 1e-3, 1e-4` (32, 20 and 18 levels, up to
+  50000 DoF, about 1 minute) and resolves the shock (slope -4442 against the analytic -5000 at 53000 DoF). The hybrid Newton
+  solver has Armijo backtracking (`NewtonOptions.damping = "backtrack"`, default of the hybrid method; `damping = "none"` gives the
+  old undamped iteration), a cold retry from the initial guess and a continuation in kappa for failed levels
+  (`cold_retry`, `continuation`; not in the legacy preset), and the new status `stalled`. The history has the column
+  `newton_increment`. `shock_diagnostics` measures the slope and width on a refined window around the shock (the 2001-point line
+  saturated near -2000 at `kappa = 1e-4`); `kappa = 1e-2, 1e-3` values are unchanged. The example's `--full` cap is 50000 DoF
+  (was 20000); the Newton tolerances are unchanged (`|du|_Vh < 1e-9` or `|R| < 1e-11`, stricter than the 1e-6 of the paper).
 - `adaptdg.vms`: the loop history has two extra columns, `L2_proj` and `Vh_proj` (and `*_proj` for `theta`, `u`, `phi`
   with `reconstruct`); set `error_targets = "exact"` to keep the previous columns only. Existing values are unchanged.
 

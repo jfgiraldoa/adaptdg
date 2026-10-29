@@ -3,7 +3,7 @@
 problem.json keys (defaults in brackets): name ["reentrant_corner", "fichera", "heterogeneous",
 "anisotropic", "eriksson_johnson", "eriksson_johnson_3d", "poisson_sine", "burgers_isotropic", "burgers_single"], kappa [1.0; 1e-2 for eriksson_johnson], beta [none; (1, 0) for heterogeneous], alpha [2/3, exponent of the exact
 solution; ``q`` for fichera, also accepted under the key ``q``], eps1/eps2 [0.1/1.0, heterogeneous], r/tau [1e4/1e-3, anisotropic],
-initial_mesh_size [4, even number of cells per side]. numerics.json keys: see :class:`~adaptdg.vms.loop.LoopSettings` (``eta_0`` is accepted for ``eta0``).
+initial_mesh_size [4, even number of cells per side], norm_form ["isotropic", burgers_single only: "streamline"]. numerics.json keys: see :class:`~adaptdg.vms.loop.LoopSettings` (``eta_0`` is accepted for ``eta0``).
 """
 
 from __future__ import annotations
@@ -37,6 +37,8 @@ def build_problem(spec: dict[str, Any]) -> Problem:
         kwargs["alpha" if "alpha" in names else "q"] = float(spec["alpha"])
     if "q" in spec and "q" in names:  # fichera: ``q`` is accepted as well as ``alpha``
         kwargs["q"] = float(spec["q"])
+    if "norm_form" in spec and "norm_form" in names:
+        kwargs["norm_form"] = str(spec["norm_form"])
     if spec.get("beta") and "velocity" in names:
         kwargs["velocity"] = tuple(float(v) for v in spec["beta"])
     for key in ("eps1", "eps2", "r", "tau"):  # Heterogeneous / Anisotropic parameters

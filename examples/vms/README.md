@@ -41,7 +41,7 @@ the PNG files are collected in `~/vms_out/figures/<job>/`.
 | fichera_3d (paper, legacy) | 4 min each | 3 GB |
 | eriksson_johnson (paper, legacy) | 8 min each | 4 GB |
 | poisson_fem (paper, legacy) | 6 min each | 5 GB |
-| burgers_single (paper, legacy) | 3 and 3-8 min | 0.9 GB |
+| burgers_single (paper, legacy) | 1 and 5 min | 1.7 GB |
 | burgers_isotropic (paper, legacy) | 4.5 and 6.5 min | 3.5 GB |
 | compare_presets | a few minutes (5 min assumed) | about 2 GB |
 
