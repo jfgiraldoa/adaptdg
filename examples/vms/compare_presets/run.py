@@ -1,13 +1,13 @@
 """Paper preset versus legacy preset on the three VMS cases, both error targets.
 
-Usage: python run.py [--full]. The short run (p = 1, 2, 12 runs, about 1-2 min) is the default;
+Usage: python run.py [--full] [--degrees 1 2 ...] [--dofmax N]. The short run (p = 1, 2, 12 runs, about 1-2 min) is the default;
 --full uses larger problem sizes. Results go to ./out/<case>/<preset>/history_p*_*.csv and the
 summary (slopes and the ratio Vh(phi)/Vh(theta) at the finest level) to ./out/summary.csv.
 """
 
+import argparse
 import csv
 import json
-import sys
 import time
 from pathlib import Path
 
@@ -43,8 +43,16 @@ def summarise(case: str, p: int, preset: str, history: list[dict], span: float) 
     return rows
 
 
-def main(full: bool = False) -> None:
-    degrees = (1, 2)
+def parse_args(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--full", action="store_true", help="larger problems")
+    ap.add_argument("--degrees", type=int, nargs="+", help="polynomial degrees (default: see above)")
+    ap.add_argument("--dofmax", type=int, help="override the DoF cap of every run")
+    return ap.parse_args(argv)
+
+
+def main(full: bool = False, degrees=None, dofmax_cap=None) -> None:
+    degrees = degrees or (1, 2)
     jobs = [(c, p, pr) for c in CASES for p in degrees for pr in PRESETS]
     summary: list[dict] = []
     t0 = time.time()
@@ -56,7 +64,7 @@ def main(full: bool = False) -> None:
             problem["r"] = 1e4
         out = run_from_json(problem, EXAMPLES / folder / "numerics.json", HERE / "out" / case / preset,
                             progress=None, p=p, refinement=refinement, reconstruct=True, preset=preset,
-                            dofmax=dofmax[full], max_levels=levels[full])
+                            dofmax=dofmax_cap or dofmax[full], max_levels=levels[full])
         last = out["history"][-1]
         print(f"  ndofs={last['ndofs']} levels={len(out['history'])} "
               f"Vh_phi/Vh_theta exact={last['Vh_phi'] / last['Vh_theta']:.3f} "
@@ -70,4 +78,5 @@ def main(full: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    main("--full" in sys.argv[1:])
+    a = parse_args()
+    main(a.full, a.degrees, a.dofmax)

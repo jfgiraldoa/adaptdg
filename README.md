@@ -42,6 +42,9 @@ problems, and time-dependent transport runs with adaptive meshes in 1D and 2D.
 
 Each example reads `problem.json` and `numerics.json`.
 
+`examples/vms/run_all.py` runs all of them (every example and preset, in parallel, with resume and a comparison
+report); see `examples/vms/README.md`.
+
 ## Install
 
 dolfinx, petsc4py and mpi4py are not pip-installable, so create a conda environment first:

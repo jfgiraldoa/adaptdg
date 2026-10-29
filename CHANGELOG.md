@@ -6,6 +6,10 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `examples/vms/run_all.py`: batch runner for all VMS examples and presets (parallel workers, per-job copies of the example folder,
+  resume, timeouts, `status.json`, `REPORT.md` and `summary.csv` with slopes, ratios, Newton and clustering numbers, `--smoke`
+  plumbing mode) and `examples/vms/README.md`. `--degrees` / `--dofmax` added to the `run.py` of `reentrant_corner`,
+  `heterogeneous`, `anisotropic` and `compare_presets`.
 - `examples/vms/burgers_isotropic` (paper section 6.5.1) and the problem `BurgersIsotropic`: manufactured tanh layer, both error
   targets, `ubar`/`theta`/`u`/`phi` errors with the nonlinear reconstruction, both presets; `theta_converged` column.
 - `adaptdg.vms.nonlinear`: nonlinear residual minimisation for `div f(u) - div(kappa grad u) = s` (paper section 6): conservative

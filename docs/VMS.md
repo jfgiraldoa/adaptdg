@@ -224,3 +224,8 @@ Legacy references are file:line in the `asfem-legacy` tag.
 * In the Vh norm the reconstruction `phi` is 1.1-1.26 times worse than `theta` against the exact solution, and
   better only against the DG(p) L2 projection of the exact solution (the target of the legacy postprocessing);
   see "Error targets" and "Legacy and paper presets".
+
+## Running every example
+
+`examples/vms/run_all.py` runs all the examples and both presets in parallel (resume, per-job timeouts) and writes
+`REPORT.md` and `summary.csv`; see `examples/vms/README.md`.

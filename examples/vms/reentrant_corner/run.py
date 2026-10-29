@@ -1,10 +1,10 @@
 """Re-entrant corner: adaptive residual minimisation at several polynomial degrees.
 
-Usage: python run.py [--full]. The short run (p = 1, 2, about 10 s) is the default; --full runs
+Usage: python run.py [--full] [--degrees 1 2 ...] [--dofmax N]. The short run (p = 1, 2, about 10 s) is the default; --full runs
 p = 1..4 up to 40000 DoF plus uniform refinement for comparison. Results go to ./out/.
 """
 
-import sys
+import argparse
 import time
 from pathlib import Path
 
@@ -13,9 +13,17 @@ from adaptdg.vms.run import run_from_json
 HERE = Path(__file__).parent
 
 
-def main(full: bool = False) -> None:
-    degrees = [1, 2, 3, 4] if full else [1, 2]
-    dofmax = 40000 if full else 10000
+def parse_args(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--full", action="store_true", help="larger problems")
+    ap.add_argument("--degrees", type=int, nargs="+", help="polynomial degrees (default: see above)")
+    ap.add_argument("--dofmax", type=int, help="override the DoF cap of every run")
+    return ap.parse_args(argv)
+
+
+def main(full: bool = False, degrees=None, dofmax=None) -> None:
+    degrees = degrees or ([1, 2, 3, 4] if full else [1, 2])
+    dofmax = dofmax or (40000 if full else 10000)
     jobs = [(p, "adaptive") for p in degrees] + [(p, "uniform") for p in degrees[:2]]
     t0 = time.time()
     for i, (p, refinement) in enumerate(jobs, start=1):
@@ -33,4 +41,5 @@ def main(full: bool = False) -> None:
 
 
 if __name__ == "__main__":
-    main("--full" in sys.argv[1:])
+    a = parse_args()
+    main(a.full, a.degrees, a.dofmax)
