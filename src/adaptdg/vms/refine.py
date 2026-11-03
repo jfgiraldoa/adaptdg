@@ -7,6 +7,12 @@ from typing import Any
 import numpy as np
 
 
+def _serial_kwargs(domain: Any) -> dict[str, Any]:
+    """``partitioner=None`` on one process: the default partitioner leaks one MPI communicator per ``mesh.refine`` call
+    (DOLFINx 0.11), which exhausts MPICH's 2048 communicators in long adaptive runs; the serial mesh is identical."""
+    return {"partitioner": None} if domain.comm.size == 1 else {}
+
+
 def refine_marked(domain: Any, marked: np.ndarray) -> tuple[Any, np.ndarray]:
     """Refine the cells flagged in ``marked``; return the new mesh and each new cell's parent.
 
@@ -27,7 +33,7 @@ def refine_marked(domain: Any, marked: np.ndarray) -> tuple[Any, np.ndarray]:
     c2e = domain.topology.connectivity(d, 1)
     edges = np.unique(np.concatenate([c2e.links(int(c)) for c in np.flatnonzero(flags)]))
     refined, parent, _ = mesh.refine(
-        domain, edges.astype(np.int32), option=mesh.RefinementOption.parent_cell
+        domain, edges.astype(np.int32), option=mesh.RefinementOption.parent_cell, **_serial_kwargs(domain)
     )
     order = np.asarray(refined.topology.original_cell_index, dtype=np.int64)
     return refined, np.asarray(parent, dtype=np.int32)[order]
@@ -37,4 +43,4 @@ def refine_uniform(domain: Any) -> Any:
     """Refine every cell."""
     from dolfinx import mesh
 
-    return mesh.refine(domain)[0]
+    return mesh.refine(domain, **_serial_kwargs(domain))[0]

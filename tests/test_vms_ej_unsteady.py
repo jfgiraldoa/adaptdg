@@ -209,3 +209,37 @@ def test_stationary_forms_are_unchanged_without_neumann_tags_or_time_coefficient
     prob = ErikssonJohnson()
     forms = DGForms(prob.initial_mesh(4), prob, 1)
     assert forms.ds_n is None and forms.ds_g is forms.ds and forms.time_coeffs is None and forms.history == []
+
+
+def test_adaptive_refinement_does_not_leak_mpi_communicators(dolfinx_env):
+    """DOLFINx 0.11 ``mesh.refine`` with the default partitioner leaks one communicator per call; MPICH has only 2048,
+    so the full legacy run died with "Too many communicators". ``refine_marked``/``refine_uniform`` avoid it in serial."""
+    import gc
+
+    from mpi4py import MPI
+
+    from adaptdg.vms.refine import refine_marked, refine_uniform
+
+    if "MPICH" not in MPI.Get_library_version() or MPI.COMM_WORLD.size != 1:
+        pytest.skip("communicator footprint is probed through MPICH handle indices, serial only")
+
+    def footprint():  # highest MPICH handle index of 200 fresh duplicates ~ number of live communicators
+        comms = [MPI.COMM_WORLD.Dup() for _ in range(200)]
+        top = max(MPI._handleof(c) & 0x3FFFFFF for c in comms)
+        for c in comms:
+            c.Free()
+        return top
+
+    problem = ErikssonJohnsonUnsteady(diffusivity=1e-2)
+    gc.collect()
+    before = footprint()
+    for _ in range(20):  # every call refines a new parent mesh, as the adaptive loop does
+        domain = problem.initial_mesh(4)
+        for _ in range(3):
+            marked = np.zeros(domain.topology.index_map(2).size_local, dtype=bool)
+            marked[:3] = True
+            domain = refine_marked(domain, marked)[0]
+        domain.topology.create_entities(1)
+        refine_uniform(domain)
+    gc.collect()
+    assert footprint() - before <= 10  # unfixed: +80, fixed: +5 (live meshes)
