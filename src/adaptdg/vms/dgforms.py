@@ -8,6 +8,11 @@ Implements, for scalar problems of any polynomial degree p in d = 2, 3:
   * eq. (11): right-hand side with weak Nitsche Dirichlet data (all Dirichlet faces);
   * eqs. (12)-(14): Gram form of the discrete dual norm (L2 + jump/streamline upwind norm +
               SWIP norm), optionally weighted by a DG0 test function to get per-cell values.
+
+Optional extensions, both off by default (the stationary forms are then unchanged): Neumann data
+``kappa grad(u) . n = g_N`` on ``Problem.neumann_tags`` and one time step of a BDF scheme through
+``time_coeffs = (c1, c2)`` (:mod:`adaptdg.vms.unsteady`): ``b -> c1 (v, u) + c2 b``, ``g -> c1 (a, c) + c2 g`` and
+``l -> c2 l + history``, with the legacy factors ``c1 = 1`` and ``c2 = dt`` (BE) or ``2 dt/3`` (BDF2).
 """
 
 from __future__ import annotations
@@ -56,7 +61,8 @@ class DGForms:
     """
 
     def __init__(self, domain: Any, problem: Any, p: int, *, eta0: float = 1.0,
-                 degree: int | None = None, rhs_degree: int = 8, preset: Any = None) -> None:
+                 degree: int | None = None, rhs_degree: int = 8, preset: Any = None,
+                 time_coeffs: tuple[Any, Any] | None = None) -> None:
         import ufl
         from adaptdg.vms.meshes import tag_boundary
         from adaptdg.vms.preset import resolve_preset
@@ -72,6 +78,13 @@ class DGForms:
         self.dx, self.dS, self.ds = self._measures(2 * p + 2 if degree is None else degree, tags)
         self.dx_r, _, self.ds_r = self._measures(rhs_degree, tags)
         self.ds_out = self._outflow_measure(2 * p + 2 if degree is None else degree, tags)
+        # Neumann faces: advective inflow data and flux datum (rhs), boundary terms of the Gram form
+        self.ds_n = self._tagged_measure("neumann_tags", 2 * p + 2 if degree is None else degree, tags)
+        self.ds_n_r = self._tagged_measure("neumann_tags", rhs_degree, tags)
+        self.ds_g = self.ds if self.ds_n is None else (self.ds_n if self.ds is None else self.ds + self.ds_n)
+        self.time_coeffs = time_coeffs
+        #: ``[(coefficient, function), ...]``: the ``(coefficient * function, v)`` history terms of the right-hand side
+        self.history: list[tuple[Any, Any]] = []
 
     def _measures(self, degree: int, tags: Any) -> tuple[Any, Any, Any]:
         import ufl
@@ -85,15 +98,19 @@ class DGForms:
             dsd = ds(tag) if dsd is None else dsd + ds(tag)
         return dx, dS, dsd
 
-    def _outflow_measure(self, degree: int, tags: Any) -> Any:
-        """Measure on the faces tagged ``Problem.outflow_tags`` (natural / outflow boundary), or ``None``."""
+    def _tagged_measure(self, attribute: str, degree: int, tags: Any) -> Any:
+        """Measure on the faces tagged ``getattr(problem, attribute, ())``, or ``None`` when there are none."""
         import ufl
 
         ds = ufl.Measure("ds", domain=self.domain, subdomain_data=tags, metadata={"quadrature_degree": degree})
         out = None
-        for tag in getattr(self.problem, "outflow_tags", ()):
+        for tag in getattr(self.problem, attribute, ()):
             out = ds(tag) if out is None else out + ds(tag)
         return out
+
+    def _outflow_measure(self, degree: int, tags: Any) -> Any:
+        """Measure on the faces tagged ``Problem.outflow_tags`` (natural / outflow boundary), or ``None``."""
+        return self._tagged_measure("outflow_tags", degree, tags)
 
     # -- diffusion weights (SWIP) -------------------------------------------------------
     def _interior_weights(self) -> tuple[Any, Any, Any]:
@@ -113,6 +130,9 @@ class DGForms:
         form = self.diffusion(v, u)
         if self.beta is not None:
             form += self._upwind(v, u)
+        if self.time_coeffs is not None:
+            c1, c2 = self.time_coeffs
+            form = c1 * v * u * self.dx + c2 * form
         return form
 
     def diffusion(self, v: Any, u: Any) -> Any:
@@ -140,15 +160,18 @@ class DGForms:
         n, beta = self.n, self.beta
         bn = ufl.dot(beta, n)
         bnp = ufl.dot(beta("+"), n("+"))
-        return (
+        form = (
             v * ufl.dot(beta, ufl.grad(u)) * self.dx
             - ufl.min_value(bn, 0.0) * v * u * self.ds  # inflow term bn (u_D - u) v; u_D is in rhs
             + (0.5 * abs(bnp) * ufl.jump(v) * ufl.jump(u) - ufl.avg(v) * bnp * ufl.jump(u)) * self.dS
         )
+        if self.ds_n is not None:  # legacy: the advective inflow is also imposed on the Neumann faces
+            form -= ufl.min_value(bn, 0.0) * v * u * self.ds_n
+        return form
 
     # -- right-hand side (eq. 11) ---------------------------------------------------------
     def rhs(self, v: Any) -> Any:
-        """``l_h(v)``: source plus weak Dirichlet data."""
+        """``l_h(v)``: source plus weak Dirichlet data (and Neumann data, time-step history if configured)."""
         import ufl
 
         n, eta = self.n, self.eta
@@ -160,6 +183,14 @@ class DGForms:
             form -= ufl.min_value(ufl.dot(self.beta, n), 0.0) * v * uD * self.ds_r
         if f is not None:
             form += v * f * self.dx_r
+        if self.ds_n_r is not None:  # Neumann faces: flux datum g_N and (legacy) the advective inflow datum
+            form += v * self.problem.neumann(self.x, n) * self.ds_n_r
+            if self.beta is not None:
+                form -= ufl.min_value(ufl.dot(self.beta, n), 0.0) * v * uD * self.ds_n_r
+        if self.time_coeffs is not None:  # one step of a BDF scheme: c2 l + sum_j a_j (u^{n-j}, v)
+            form = self.time_coeffs[1] * form
+            for coefficient, function in self.history:
+                form += coefficient * function * v * self.dx
         return form
 
     # -- Gram form of the discrete dual norm (eqs. 12-14) -----------------------------------
@@ -176,7 +207,7 @@ class DGForms:
         form = (
             ufl.inner(ufl.grad(a), _flux(self.kappa, ufl.grad(c))) * wc * self.dx
             + ufl.avg(eta) * gam * ufl.inner(ufl.jump(a, n), ufl.jump(c, n)) * wf * self.dS
-            + eta * gam_b * a * c * wc * self.ds
+            + eta * gam_b * a * c * wc * self.ds_g
         )
         if self.preset.gram_l2 or self.beta is not None:  # legacy beta_inf = 1 gives the L2 term
             form += a * c * wc * self.dx
@@ -186,7 +217,10 @@ class DGForms:
             h = ufl.CellDiameter(self.domain)
             form += (
                 0.5 * abs(bnp) * ufl.jump(a) * ufl.jump(c) * wf * self.dS
-                + 0.5 * abs(bn) * a * c * wc * self.ds
+                + 0.5 * abs(bn) * a * c * wc * self.ds_g
                 + h * ufl.dot(beta, ufl.grad(a)) * ufl.dot(beta, ufl.grad(c)) * wc * self.dx
             )
+        if self.time_coeffs is not None:  # mass term of the time step: c1 (a, c) + c2 g_steady
+            c1, c2 = self.time_coeffs
+            form = c1 * a * c * wc * self.dx + c2 * form
         return form

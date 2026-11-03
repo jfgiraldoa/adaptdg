@@ -28,6 +28,8 @@ class Problem:
     dirichlet_tags: tuple[int, ...] = (1,)
     #: tags of natural (outflow) boundary faces: no Dirichlet data, only used by the nonlinear forms.
     outflow_tags: tuple[int, ...] = ()
+    #: tags of faces with Neumann data ``kappa grad(u) . n = neumann(x, n)`` (see :meth:`neumann`); linear forms only.
+    neumann_tags: tuple[int, ...] = ()
     #: False when the problem has no exact solution (the error targets are then not available).
     has_exact = True
 
@@ -55,6 +57,10 @@ class Problem:
         flux = k * ufl.grad(u) if not getattr(k, "ufl_shape", ()) else ufl.dot(k, ufl.grad(u))
         f = -ufl.div(flux)
         return f if b is None else f + ufl.dot(b, ufl.grad(u))
+
+    def neumann(self, x: Any, n: Any) -> Any:
+        """Flux datum ``g_N = kappa grad(u) . n`` on ``neumann_tags`` (``n``: UFL facet normal)."""
+        raise NotImplementedError
 
     def boundary_markers(self) -> dict[int, Marker]:
         """Boundary tags: ``{tag: marker(x) -> bool array}`` (default: one tag, whole boundary)."""
@@ -285,6 +291,95 @@ class ErikssonJohnson(Problem):
 
 
 @dataclass
+class ErikssonJohnsonUnsteady(Problem):
+    """Unsteady Eriksson-Johnson problem ``u_t + beta . grad u - kappa Delta u = 0`` on ``(-1, 0) x (-1/2, 1/2)``.
+
+    Legacy ``ErikssonJhonsson`` with ``Unsteady = True`` (the paper is Giraldo & Calo, Math. Comput. Appl. 28 (1), 7, 2023):
+    ``beta = (1, 0)``, exact solution (the steady layer plus a decaying transient, both vanish at the outflow ``x = 0``)
+
+        ``u = exp(-lc t) (exp(l1 x) - exp(l2 x)) + cos(pi y) (exp(s1 x) - exp(r1 x))/(exp(-s1) - exp(-r1))``,
+
+    ``l1,2 = (1 -+ sqrt(1 - 4 kappa lc))/(2 kappa)``, ``r1,s1 = (1 +- sqrt(1 + 4 pi^2 kappa^2))/(2 kappa)``, ``lc = 2``;
+    two boundary layers of width ``1/r1`` and ``1/l2`` (``~ kappa``) at ``x = 0``. Dirichlet data on tags 2, 3, 4 (top ``y = 1/2``,
+    outflow ``x = 0``, bottom ``y = -1/2``) and Neumann data ``kappa grad(u) . n`` on tag 1 (inflow ``x = -1``). The time is a
+    ``fem.Constant`` bound to the current mesh with :meth:`bind` and changed with :meth:`set_time`; ``initial`` is the exact solution at the
+    start time. Default ``kappa = 1e-2``, 4 x 4 crossed start mesh.
+    """
+
+    diffusivity: float = 1.0e-2
+    velocity: tuple[float, ...] = (1.0, 0.0)
+    decay: float = 2.0
+    name = "eriksson_johnson_unsteady"
+    dim = 2
+    unsteady = True
+    dirichlet_tags: tuple[int, ...] = (2, 3, 4)
+    neumann_tags: tuple[int, ...] = (1,)
+
+    def __post_init__(self) -> None:
+        self._time: Any = None
+
+    def roots(self) -> tuple[float, float, float, float]:
+        """``(l1, l2, r1, s1)``; ``l1`` and ``s1`` use the cancellation-free form ``2 num/(1 + sqrt(...))``."""
+        k, lc = float(self.diffusivity), float(self.decay)
+        w = float(np.sqrt(1 - 4 * k * lc))
+        v = float(np.sqrt(1 + 4 * np.pi**2 * k**2))
+        return 2 * lc / (1 + w), (1 + w) / (2 * k), (1 + v) / (2 * k), -2 * np.pi**2 * k / (1 + v)
+
+    def bind(self, domain: Any, t: float = 0.0) -> None:
+        """Create the time ``fem.Constant`` on ``domain`` (call again after every mesh change)."""
+        from dolfinx import fem
+
+        self._time = fem.Constant(domain, float(t))
+
+    def set_time(self, t: float) -> None:
+        self._time.value = float(t)
+
+    @property
+    def time(self) -> Any:
+        if self._time is None:
+            raise RuntimeError("call bind(domain) before using the time dependent data")
+        return self._time
+
+    def kappa(self, x: Any) -> Any:
+        return float(self.diffusivity)
+
+    def beta(self, x: Any) -> Any | None:
+        import ufl
+
+        return ufl.as_vector([float(v) for v in self.velocity])
+
+    def exact(self, x: Any) -> Any:
+        import ufl
+
+        l1, l2, r1, s1 = self.roots()
+        transient = ufl.exp(-self.decay * self.time) * (ufl.exp(l1 * x[0]) - ufl.exp(l2 * x[0]))
+        layer = ufl.cos(ufl.pi * x[1]) * (ufl.exp(s1 * x[0]) - ufl.exp(r1 * x[0])) / (np.exp(-s1) - np.exp(-r1))
+        return transient + layer
+
+    def initial(self, x: Any) -> Any:
+        """Initial condition: the exact solution at the current time (the start time)."""
+        return self.exact(x)
+
+    def source(self, x: Any) -> Any | None:
+        return None  # f = 0
+
+    def neumann(self, x: Any, n: Any) -> Any:
+        import ufl
+
+        return float(self.diffusivity) * ufl.dot(ufl.grad(self.exact(x)), n)
+
+    def boundary_markers(self) -> dict[int, Marker]:
+        return {1: lambda x: np.isclose(x[0], -1.0), 2: lambda x: np.isclose(x[1], 0.5),
+                3: lambda x: np.isclose(x[0], 0.0), 4: lambda x: np.isclose(x[1], -0.5)}
+
+    def initial_mesh(self, n: int, comm: Any = None) -> Any:
+        """``n x n`` crossed cells on ``(-1, 0) x (-1/2, 1/2)`` (legacy ``Nx = Ny = 4``)."""
+        from adaptdg.vms.meshes import crossed_rectangle
+
+        return crossed_rectangle(n, (-1.0, -0.5), (0.0, 0.5), comm)
+
+
+@dataclass
 class ErikssonJohnson3D(ErikssonJohnson):
     """3D version on the unit cube (paper section 5.6): ``beta = (1, 0, 0)``, same exact solution (independent
     of ``z``), Dirichlet data on the six faces (tags 1-6). The legacy code only ran the 2D problem."""
@@ -480,6 +575,7 @@ PROBLEMS: dict[str, type[Problem]] = {
     "anisotropic": Anisotropic,
     "eriksson_johnson": ErikssonJohnson,
     "eriksson_johnson_3d": ErikssonJohnson3D,
+    "eriksson_johnson_unsteady": ErikssonJohnsonUnsteady,
     "poisson_sine": PoissonSine,
     "burgers_isotropic": BurgersIsotropic,
     "burgers_single": BurgersSingle,

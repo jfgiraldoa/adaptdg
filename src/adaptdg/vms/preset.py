@@ -36,6 +36,15 @@ class Preset:
     #: Newton variant: "hybrid" (Gauss-Newton Jacobian far from the solution, full Jacobian near it, undamped) or
     #: "damped" (legacy ``Damping_solve``: Gauss-Newton Jacobian, damping ``1/(1 + K |R|)``).
     newton_method: str = "hybrid"
+    #: unsteady problems: each time step starts from the final mesh of the previous one ("previous") or, as the legacy
+    #: code, from the initial mesh ("initial").
+    step_mesh: str = "previous"
+    #: unsteady problems: field carried to the next time step: "u" (``ubar + utilde``, equal to the dG solution), "phi"
+    #: (adjoint reconstruction, legacy ``MSupdate``) or "ubar" (conforming part).
+    history_field: str = "u"
+    #: unsteady problems: "gram_cg" projects the transferred history onto CG(p) in the Gram norm (legacy ``Vh``
+    #: projection of the right-hand side data), "none" keeps the DG(p) L2 projection.
+    history_projection: str = "none"
 
     def __post_init__(self) -> None:
         if self.marking not in ("dorfler", "fixed_fraction"):
@@ -46,13 +55,20 @@ class Preset:
             raise ValueError("nonlinear_flux must be 'lax_friedrichs' or 'wind'")
         if self.newton_method not in ("hybrid", "damped", "full"):
             raise ValueError("newton_method must be 'hybrid', 'damped' or 'full'")
+        if self.step_mesh not in ("previous", "initial"):
+            raise ValueError("step_mesh must be 'previous' or 'initial'")
+        if self.history_field not in ("u", "phi", "ubar"):
+            raise ValueError("history_field must be 'u', 'phi' or 'ubar'")
+        if self.history_projection not in ("none", "gram_cg"):
+            raise ValueError("history_projection must be 'none' or 'gram_cg'")
 
 
 PRESETS: dict[str, Preset] = {
     "paper": Preset(),
     "legacy": Preset(name="legacy", gram_l2=False, gamma_factor_b=0.5, gamma_factor_gram=0.5,
                      quadrature_degree=8, marking="fixed_fraction", marking_ratio=0.25,
-                     adjoint_ordering="legacy", nonlinear_flux="wind", newton_method="damped"),
+                     adjoint_ordering="legacy", nonlinear_flux="wind", newton_method="damped",
+                     step_mesh="initial", history_field="phi", history_projection="gram_cg"),
 }
 
 

@@ -41,7 +41,7 @@ def build_problem(spec: dict[str, Any]) -> Problem:
         kwargs["norm_form"] = str(spec["norm_form"])
     if spec.get("beta") and "velocity" in names:
         kwargs["velocity"] = tuple(float(v) for v in spec["beta"])
-    for key in ("eps1", "eps2", "r", "tau"):  # Heterogeneous / Anisotropic parameters
+    for key in ("eps1", "eps2", "r", "tau", "decay"):  # Heterogeneous / Anisotropic / unsteady EJ parameters
         if key in spec and key in names:
             kwargs[key] = float(spec[key])
     return cls(**kwargs)

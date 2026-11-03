@@ -31,20 +31,30 @@ class RMSolver:
     """Linear stationary residual-minimisation solver (any p, 2D and 3D)."""
 
     def __init__(self, problem: Any, p: int, *, eta0: float = 1.0,
-                 quadrature_degree: int = 12, solver: str = "mumps", preset: Any = None) -> None:
+                 quadrature_degree: int = 12, solver: str = "mumps", preset: Any = None,
+                 time_coeffs: tuple[float, float] | None = None) -> None:
         self.problem, self.p, self.eta0 = problem, p, eta0
         self.preset = preset
         self.quadrature_degree, self.solver = quadrature_degree, solver
+        self.time_coeffs = time_coeffs  # (c1, c2) of one time step, see :mod:`adaptdg.vms.unsteady`
 
-    def system(self, domain: Any) -> tuple[Any, Any, Any, DGForms]:
-        """Return ``(a, L, space, forms)``: eq. (18) as UFL forms on ``DG(p) x CG(p)``."""
+    def system(self, domain: Any, history: Any = None) -> tuple[Any, Any, Any, DGForms]:
+        """Return ``(a, L, space, forms)``: eq. (18) as UFL forms on ``DG(p) x CG(p)``.
+
+        ``history`` (unsteady steps only): ``[(coefficient, function), ...]``, the terms of the previous time levels in the
+        right-hand side (``forms.history``, also used by the reconstruction of ``theta``).
+        """
         import basix.ufl
         import ufl
         from dolfinx import fem
 
         p = self.p
+        coeffs = None
+        if self.time_coeffs is not None:  # Constants: the compiled forms are reused for every step and mesh
+            coeffs = tuple(fem.Constant(domain, float(c)) for c in self.time_coeffs)
         forms = DGForms(domain, self.problem, p, eta0=self.eta0, rhs_degree=self.quadrature_degree,
-                         preset=self.preset)
+                         preset=self.preset, time_coeffs=coeffs)
+        forms.history = list(history or [])
         cell = domain.basix_cell()
         element = basix.ufl.mixed_element(
             [basix.ufl.element("DG", cell, p), basix.ufl.element("Lagrange", cell, p)]
@@ -55,10 +65,10 @@ class RMSolver:
         a = forms.gram(w, r) + forms.b(w, u) + forms.b(r, v)
         return a, forms.rhs(w), space, forms
 
-    def solve(self, domain: Any) -> RMResult:
+    def solve(self, domain: Any, history: Any = None) -> RMResult:
         from dolfinx.fem import petsc
 
-        a, rhs, space, forms = self.system(domain)
+        a, rhs, space, forms = self.system(domain, history)
         opts = {"ksp_type": "preonly", "pc_type": "lu", "pc_factor_mat_solver_type": self.solver}
         sol = petsc.LinearProblem(a, rhs, petsc_options=opts, petsc_options_prefix="vms_rm_").solve()
         ind = cell_values(domain, forms.gram(sol.sub(0), sol.sub(0), _dg0_test(domain)))

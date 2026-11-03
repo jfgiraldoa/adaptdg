@@ -11,6 +11,7 @@ from adaptdg.vms.problems import (
     BurgersSingle,
     ErikssonJohnson,
     ErikssonJohnson3D,
+    ErikssonJohnsonUnsteady,
     Fichera3D,
     Heterogeneous,
     NonlinearProblem,
@@ -19,5 +20,5 @@ from adaptdg.vms.problems import (
     ReentrantCorner,
 )
 
-__all__ = ["Anisotropic", "BurgersIsotropic", "BurgersSingle", "ErikssonJohnson", "ErikssonJohnson3D", "Fichera3D",
+__all__ = ["Anisotropic", "BurgersIsotropic", "BurgersSingle", "ErikssonJohnson", "ErikssonJohnson3D", "ErikssonJohnsonUnsteady", "Fichera3D",
            "Heterogeneous", "NonlinearProblem", "PoissonSine", "Problem", "ReentrantCorner"]
