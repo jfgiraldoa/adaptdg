@@ -100,8 +100,8 @@ solver; `problems.NonlinearProblem` is the interface (`flux(u)`, `dflux(u)`, `d2
 derived from the exact solution when there is one, `outflow_tags`, `has_exact`). `NonlinearProblem.norm_form` selects the Gram
 form: `"streamline"` (the form of the linear problems; the norm wind of eq. 50, legacy `beta_inf = 1`, is `Problem.beta`, a
 constant `(1, 1)`, not a convection velocity) or `"isotropic"` (eqs. 49-50 as written: `(w, w) + sum_F ||[[w]]||_F^2 +
-sum_K h_K ||grad w||_K^2`, no wind). `BurgersSingle` uses the isotropic form (`norm_form` in `problem.json`), `BurgersIsotropic`
-the streamline form.
+sum_K h_K ||grad w||_K^2`, no wind). `BurgersSingle` and `BurgersIsotropic` use the isotropic form (class default, `norm_form` in `problem.json`
+overrides it); the streamline form is kept for comparison.
 `numerics.json` accepts `newton` (overrides of `nonlinear.NewtonOptions`) and `newton_fallback`.
 
 | Paper | Where | Content |
@@ -170,15 +170,16 @@ shock (slope -4227 at 59000 DoF).
 
 `BurgersIsotropic` (`"burgers_isotropic"`): `div(b u^2/2) - kappa Delta u = f`, `b = (1, 1)`, `kappa = 1e-3`, exact solution
 `u = (1 - tanh((2x - y - 1/4)/sqrt(5 kappa)))/2`, `f` and the Dirichlet data (four sides) derived symbolically from it, initial guess
-0.5, 6 x 6 start mesh, norm wind `(1, 1)`. The history has both error targets (exact and DG(p) L2 projection) for `ubar`, `theta`,
-`u` and `phi` (`reconstruct`). See `examples/vms/burgers_isotropic/`. Measured (paper preset, `kappa = 1e-3`, 32000-49000 DoF): Newton
-converges on 28 of 28 levels at `p = 1` and `p = 3` and on 27 of 28 at `p = 2` (with `maxit = 400`; the library default 100 fails on
-4 of 24 levels at `p = 1`); slopes of `E` against DoF^(1/2) -1.1, -2.0, -3.2 for `p = 1, 2, 3` (pre-asymptotic at `p = 1`); `Vh` of
-`ubar` -1.6, -2.5, -4.0; `Vh(phi)/Vh(theta)` 0.97-0.98 against the exact solution and 0.85-0.94 against the projection; `L2` of
-`ubar` is path dependent and plateaus near 5e-5 at `p = 3` (cause not investigated). Legacy preset: Newton fails on 9/16, 9/15 and 6/17
-levels (`p = 1, 2, 3`, `failK`, final `|R|` 7.6e-12 to 2.4e-5) with `E` 1.2-1.3 times the paper preset's at equal DoF whether the level
-converged or not. `theta` is solved by the undamped exact-Jacobian Newton in both presets (`theta_converged` column; the legacy dG
-iteration fails on most levels).
+0.5, 6 x 6 start mesh, isotropic norm of eqs. (49)-(50) (the earlier streamline norm with the wind `(1, 1)` is `norm_form = "streamline"`). The history has both error targets (exact and DG(p) L2 projection) for `ubar`, `theta`,
+`u` and `phi` (`reconstruct`). See `examples/vms/burgers_isotropic/`. Measured (`python run.py --full`, `kappa = 1e-3`, isotropic norm, paper preset, library default `maxit = 100`): Newton converges
+on 27 of 29 levels at `p = 1` (63000 DoF; levels 3 and 7 end `stalled` at `|R|` 5e-6 and 1e-6, the same with `maxit = 400`), 32 of 32 at
+`p = 2` (93000 DoF) and 41 of 41 at `p = 3` (110000 DoF), with at most 53, 138 and 94 iterations per level (before, with the streamline
+norm: 28/28, 27/28, 28/28 levels at 30000-50000 DoF, at most 220, 421 and 36 iterations, and `maxit = 100` failed 4 of 24 levels at
+`p = 1`); slopes of `E` against DoF^(1/2) -1.0, -2.0, -3.2 for `p = 1, 2, 3`, of `Vh` of `ubar` -1.3, -2.8, -3.9;
+`Vh(phi)/Vh(theta)` 0.97-0.99 against the exact solution and 0.83-0.94 against the projection; `L2` of `ubar` is still not monotone at
+`p = 1` but no longer plateaus at `p = 3` (1.1e-6 at 110000 DoF, was 5e-5 at 40000). Legacy preset: Newton fails (`failK`) on 10/15,
+3/16 and 4/20 levels (`p = 1, 2, 3`), nearly all of them on the coarse levels. `theta` is solved by the undamped exact-Jacobian
+Newton in both presets (`theta_converged` column). The whole `--full` run takes 2 min (1.7 GB).
 
 ## Galerkin baseline (Poisson FEM)
 

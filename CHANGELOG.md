@@ -55,9 +55,15 @@ versioning: Semantic Versioning.
 - `CITATION.cff`, project URLs and keywords in `pyproject.toml`.
 
 ### Changed
+- `BurgersIsotropic` (6.5.1) now uses the paper's isotropic Gram norm (eqs. 49-50, `norm_form = "isotropic"`, as `BurgersSingle`);
+  `norm_form = "streamline"` restores the old norm wind (1, 1). Paper preset, `--full` (63000-110000 DoF), p = 1, 2, 3: Newton converges on
+  27/29, 32/32 and 41/41 levels (before 28/28, 27/28, 28/28 at 30000-50000 DoF) with at most 53, 138 and 94 iterations per level (before 220, 421
+  and 36); the library default `maxit = 100` is now enough, so the example no longer overrides it for the paper preset (the legacy
+  preset keeps 400). The two non-converged levels at `p = 1` are `stalled` at `|R| < 6e-6`. The `L2` plateau of `ubar` at `p = 3` is gone
+  (1.1e-6 against 5e-5).
 - `adaptdg.vms` single-component Burgers (6.5.2) at small kappa: `BurgersSingle` now uses the norm of eqs. (49)-(50)
   (`norm_form = "isotropic"`: `(w, w) + sum ||[[w]]||_F^2 + sum h_K ||grad w||_K^2`, no wind; `"streamline"` restores the old
-  Gram form with the norm wind (1, 1), still used by `BurgersIsotropic`). With the old form Newton failed on 10 of 15 levels
+  Gram form with the norm wind (1, 1), kept for comparison). With the old form Newton failed on 10 of 15 levels
   at `kappa = 1e-4`; now `python run.py --full` converges on every level at `kappa = 1e-2, 1e-3, 1e-4` (32, 20 and 18 levels, up to
   50000 DoF, about 1 minute) and resolves the shock (slope -4442 against the analytic -5000 at 53000 DoF). The hybrid Newton
   solver has Armijo backtracking (`NewtonOptions.damping = "backtrack"`, default of the hybrid method; `damping = "none"` gives the

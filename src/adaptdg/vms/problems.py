@@ -363,12 +363,14 @@ class BurgersIsotropic(NonlinearProblem):
 
     ``b = (1, 1)``, ``kappa = 1e-3``, exact solution ``u = (1 - tanh((2x - y - 1/4)/sqrt(5 kappa)))/2`` (an inner layer
     along the line ``2x - y = 1/4``), ``f`` and the Dirichlet data on the four sides derived from it, initial guess 0.5.
-    The norm wind of the Gram form is ``norm_velocity = (1, 1)`` (legacy ``beta_inf = 1``). Start mesh: 6 x 6.
+    Gram form: the isotropic norm of eqs. (49)-(50) (``norm_form = "isotropic"``, no wind); ``norm_form="streamline"``
+    restores the earlier norm wind ``norm_velocity = (1, 1)`` (legacy ``beta_inf = 1``). Start mesh: 6 x 6.
     """
 
     diffusivity: float = 1.0e-3
     velocity: tuple[float, ...] = (1.0, 1.0)
     norm_velocity: tuple[float, ...] = (1.0, 1.0)
+    norm_form: str = "isotropic"
     name = "burgers_isotropic"
     dim = 2
     dirichlet_tags: tuple[int, ...] = (1, 2, 3, 4)

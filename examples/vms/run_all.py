@@ -67,7 +67,7 @@ def _jobs() -> list[Job]:
         ("eriksson_johnson", True, [*SMOKE_ARGS, "--kappa", "1e-2"], (), (8.0, 8.0), 4.0),
         ("poisson_fem", True, SMOKE_ARGS, (), (6.0, 6.0), 5.0),
         ("burgers_single", True, [*SMOKE_ARGS, "--kappa", "1e-2"], (), (1.0, 5.0), 1.7),
-        ("burgers_isotropic", True, SMOKE_ARGS, (), (4.5, 6.5), 3.5),
+        ("burgers_isotropic", True, SMOKE_ARGS, (), (2.0, 2.0), 2.0),
         ("compare_presets", False, SMOKE_ARGS, ("reentrant_corner", "heterogeneous", "anisotropic"), (5.0,), 2.0),
     ]
     jobs = []
