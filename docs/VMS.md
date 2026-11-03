@@ -181,6 +181,37 @@ norm: 28/28, 27/28, 28/28 levels at 30000-50000 DoF, at most 220, 421 and 36 ite
 3/16 and 4/20 levels (`p = 1, 2, 3`), nearly all of them on the coarse levels. `theta` is solved by the undamped exact-Jacobian
 Newton in both presets (`theta_converged` column). The whole `--full` run takes 2 min (1.7 GB).
 
+## Unsteady Eriksson-Johnson (BE and BDF2, adaptive in space)
+
+`ErikssonJohnsonUnsteady` (`"eriksson_johnson_unsteady"`): `u_t + b . grad u - kappa Delta u = 0` on `(-1, 0) x (-1/2, 1/2)`, `b = (1, 0)`,
+`kappa = 1e-2`, exact solution `exp(-2 t)(exp(l1 x) - exp(l2 x)) + cos(pi y)(exp(s1 x) - exp(r1 x))/(exp(-s1) - exp(-r1))` (two layers at the
+outflow `x = 0`), Dirichlet data on tags 2, 3, 4 and Neumann data `kappa grad u . n` on the inflow `x = -1` (tag 1); these are the legacy tests
+`test_unsteady_ErikssonJhonssonBE` and `...BDF2`. The paper behind them (Giraldo & Calo, Math. Comput. Appl. 28 (1), 7, 2023) was not available:
+the scheme follows the legacy code. The time `t` is a `fem.Constant` (`problem.bind(domain, t)` per mesh, `problem.set_time`).
+
+* Time step (`adaptdg.vms.unsteady`): `(c1 I + c2 L) u^{n+1} = c2 f + sum_j a_j u^{n-j}` with `c1 = 1`, `c2 = dt`, `a = (1)` (BE) or `c2 = 2 dt/3`,
+  `a = (4/3, -1/3)` (BDF2, started with one BE step). The saddle-point system is that of eq. (18) with `b -> c1 (v, u) + c2 b` and the Gram form
+  `c1 (a, c) + c2 g` (`DGForms(time_coeffs=(c1, c2))`, `RMSolver(time_coeffs=...)`; the reconstruction of `utilde`, `phi`, `theta` is unchanged
+  and uses the same history). The errors `Vh` are measured in the steady Gram norm (independent of `dt`); `E` is the unsteady one.
+* Neumann data (`Problem.neumann_tags`, `Problem.neumann(x, n)`): `+ (g_N, v)` on the tagged faces; as in the legacy code the advective inflow datum is
+  also imposed there and the Gram form has the boundary terms on them. Without Neumann tags (all stationary cases) the forms are unchanged.
+* Per time step the loop is solve -> estimate -> mark -> refine with the stopping rule `E <= tol`, `max_levels` solves or `ndofs >= dofmax`.
+  `paper` preset: the step starts from the final mesh of the previous step and carries `u = ubar + utilde`; `legacy` preset (`step_mesh`, `history_field`,
+  `history_projection` of `Preset`): every step restarts from the 4 x 4 mesh, carries `phi` (legacy `MSupdate`) and projects it onto CG(p) in the Gram norm,
+  plus the usual legacy choices (fixed-fraction marking, quadrature degree 8, factors 0.5).
+* History transfer between meshes: L2 projection onto DG(p) of the old function sampled at the quadrature points of the new mesh
+  (`interpolate_nonmatching` into a quadrature element, then `(w, v) = (f_old, v)`). It is the identity on nested meshes (`paper`), keeps the
+  integral of `u` (constants are in the space) and is a least-squares coarsening on a coarser mesh (`legacy`).
+* Not reproduced: the legacy runs a separate dG time marching (`uDG`) for the pure dG solution; here `theta` is the dG solution of each step from the
+  same history. The legacy BDF2 bootstrap recomputes the BE step on every level of step 2; here the first step is a full adaptive BE step.
+
+Verification (`tests/test_vms_ej_unsteady.py`): the exact solution satisfies the PDE, the legacy `uDexp` and `uNexp`; on a fixed mesh (`kappa = 0.1`,
+`p = 4`, 6 x 6, `T = 0.1`, `dt = T/4, T/8, T/16`, L2 error of `theta` against the exact solution) the observed orders are 0.97, 0.98 (BE) and
+2.02, 1.90 (BDF2); the adaptive run is at least 5 times more accurate than a uniform mesh with the same number of DoF (test) and 30 times in the full run at `p = 2`. See
+`examples/vms/eriksson_johnson_unsteady/` for the runs (`--full`, `kappa = 1e-2`, `dt = 0.005`, `T = 0.1`, `paper` preset, 7 min): the first step refines
+(24-29 solves) until `E <= tol` and the later steps need one solve because the layers are stationary, so the mesh (28000-45000 DoF) does not change;
+final-time L2 error of `ubar` for `p = 1, 2, 3`: BE 9.8e-4, 4.0e-4, 3.7e-4 and BDF2 9.1e-4, 1.5e-4, 3.5e-5 (uniform meshes: 4.6e-3 at `p = 2` with 33000 DoF, 8.1e-4 (BE) and 7.0e-4 (BDF2) at `p = 3` with 60000 DoF).
+
 ## Galerkin baseline (Poisson FEM)
 
 `galerkin.solve_galerkin(problem, mesh, p)` solves the standard conforming `CG(p)` Galerkin problem on the same `Problem`
@@ -198,9 +229,9 @@ L2 error and a Vh error 1.1-1.5 times larger than CG against the exact solution.
 ## Modules
 
 `problems` (`Problem`, `NonlinearProblem`, `ReentrantCorner`, `Fichera3D`, `Heterogeneous`, `Anisotropic`, `ErikssonJohnson`,
-`ErikssonJohnson3D`, `PoissonSine`, `BurgersIsotropic`, `BurgersSingle`), `nonlinear` (`NonlinearForms`, `NonlinearRMSolver`, `newton_solve`, `reconstruct_nonlinear`, `NonlinearAdaptiveLoop`), `galerkin` (`solve_galerkin`, `galerkin_errors`), `meshes` (crossed-triangle L-shape, Fichera cube, unit cube, boundary tags), `dgforms`, `saddle` (`RMSolver`, `RMResult`), `refine`
+`ErikssonJohnson3D`, `ErikssonJohnsonUnsteady`, `PoissonSine`, `BurgersIsotropic`, `BurgersSingle`), `nonlinear` (`NonlinearForms`, `NonlinearRMSolver`, `newton_solve`, `reconstruct_nonlinear`, `NonlinearAdaptiveLoop`), `galerkin` (`solve_galerkin`, `galerkin_errors`), `meshes` (crossed-triangle L-shape, Fichera cube, unit cube, boundary tags), `dgforms`, `saddle` (`RMSolver`, `RMResult`), `refine`
 (`refine_marked`, `refine_uniform`, any dimension), `norms` (`error_targets`, `error_norms`, `error_norms_vms`), `preset` (`Preset`, `resolve_preset`), `reconstruction` (`reconstruct`, `VMSResult`), `loop`
-(`AdaptiveStationaryLoop`, `LoopSettings`, `fitted_slope`) and `run` (`run_from_json`).
+(`AdaptiveStationaryLoop`, `LoopSettings`, `fitted_slope`), `unsteady` (`UnsteadyLoop`, `UnsteadySettings`) and `run` (`run_from_json`).
 
 ## Example
 
@@ -231,6 +262,7 @@ Legacy references are file:line in the `asfem-legacy` tag.
 | Marking (`marking`, `marking_ratio`) | `REF_TYPE 2` fixed-fraction bands of the maximum indicator (frac 0.95, step 0.05) until the marked sum reaches `0.25 * total` (`refinement.py:58-74`, `add_default_parameters.py:88`) | Doerfler, `theta^2 * total` with `theta_ref` 0.25 (2D), tie tolerance 0.2 | paper: `dorfler_union`; legacy: `marking.fixed_fraction_bands` (`REF_TYPE 0`, uniform, is `refinement = "uniform"` in both) |
 | Adjoint term of the reconstruction (`adjoint_ordering`) | `b(v, eps')`, `ASFEM_main.py:524`, `matrix_assembler.py:104` | `b(eps', v)`, eqs. (32), (35) | paper: `"paper"`; legacy: `"legacy"` (differs only with advection) |
 | Error target | `project(u_exact, DG(p))` for all errors, `postprocess.py:387-392` | exact solution | both targets reported (previous section) |
+| Unsteady problems (`step_mesh`, `history_field`, `history_projection`) | new mesh from the 4 x 4 start at every step; history `phi` projected onto CG(p) in the Gram norm (`ASFEM_main.py`) | not specified | paper: previous mesh, `u = ubar + utilde`, no projection; legacy: legacy values |
 | Not switchable (equal or not reproducible) | `eta_0 = 1`, `tolref = 0.2`, `eta_adv = 1`, `epsilon = -1` (`add_default_parameters.py`); marking refines with FEniCS 2019 `refine` (not all edges of the marked cells); `MAX_REF 10`, `dofmax 1e6` | `eta_0 = 1`, `tolref = 0.2` | the same values in both presets; the mesh refinement routine and stopping rules are the package ones |
 
 ## Known differences from the paper

@@ -15,8 +15,9 @@ sys.modules["vms_run_all"] = run_all
 spec.loader.exec_module(run_all)
 
 EXAMPLES = ("reentrant_corner", "heterogeneous", "anisotropic", "fichera_3d", "eriksson_johnson", "poisson_fem",
-            "burgers_single", "burgers_isotropic", "compare_presets")
-WITH_PRESET = ("fichera_3d", "eriksson_johnson", "poisson_fem", "burgers_single", "burgers_isotropic")
+            "burgers_single", "burgers_isotropic", "eriksson_johnson_unsteady", "compare_presets")
+WITH_PRESET = ("fichera_3d", "eriksson_johnson", "poisson_fem", "burgers_single", "burgers_isotropic",
+               "eriksson_johnson_unsteady")
 
 
 def fake(name, code):

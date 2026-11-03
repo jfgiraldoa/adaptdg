@@ -6,6 +6,11 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `adaptdg.vms.unsteady` (`UnsteadyLoop`, `UnsteadySettings`) and the problem `ErikssonJohnsonUnsteady`: backward Euler and BDF2 for the
+  residual-minimisation scheme with adaptive refinement in space at every time step (per-step tolerance, level and DoF caps), L2-projection history
+  transfer between meshes, per-step errors in both targets for `ubar`, `theta`, `u`, `phi`; optional `time_coeffs` and Neumann data
+  (`Problem.neumann_tags`, `neumann`) in `DGForms` (stationary forms unchanged); `Preset` fields `step_mesh`, `history_field`, `history_projection`.
+  Orders measured on a fixed mesh: 0.97 / 0.98 (BE), 2.02 / 1.90 (BDF2). Example `examples/vms/eriksson_johnson_unsteady` (also in `run_all.py`).
 - `examples/vms/run_all.py`: batch runner for all VMS examples and presets (parallel workers, per-job copies of the example folder,
   resume, timeouts, `status.json`, `REPORT.md` and `summary.csv` with slopes, ratios, Newton and clustering numbers, `--smoke`
   plumbing mode) and `examples/vms/README.md`. `--degrees` / `--dofmax` added to the `run.py` of `reentrant_corner`,

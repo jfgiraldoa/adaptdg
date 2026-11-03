@@ -43,8 +43,9 @@ the PNG files are collected in `~/vms_out/figures/<job>/`.
 | poisson_fem (paper, legacy) | 6 min each | 5 GB |
 | burgers_single (paper, legacy) | 1 and 5 min | 1.7 GB |
 | burgers_isotropic (paper, legacy) | 2 min each | 2 GB |
+| eriksson_johnson_unsteady (paper, legacy) | 7 and about 30 min (legacy not measured in full) | 2 GB |
 | compare_presets | a few minutes (5 min assumed) | about 2 GB |
 
-The serial total is about 59 min; the longest job is about 8 min, so with 6 or 8 workers the batch should take roughly
-12-15 min (these are estimates, not measurements). Six workers need about 25 GB in the worst case (the six
+The serial total is about 96 min; the longest job is about 30 min (`eriksson_johnson_unsteady__legacy`), so with 6 or 8 workers the batch should take roughly
+30-35 min (these are estimates, not measurements). Six workers need about 25 GB in the worst case (the six
 largest jobs at once).

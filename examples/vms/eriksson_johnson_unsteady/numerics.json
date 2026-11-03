@@ -1,0 +1,31 @@
+{
+  "p": 2,
+  "integrator": "bdf2",
+  "dt": 0.005,
+  "t_start": 0.0,
+  "t_final": 0.1,
+  "tolref": 0.2,
+  "eta_0": 1.0,
+  "max_levels": 40,
+  "dofmax": 60000,
+  "tol": 0.0,
+  "solver": "mumps",
+  "quadrature_degree": 12,
+  "refinement": "adaptive",
+  "reconstruct": true,
+  "preset": "paper",
+  "error_targets": "both",
+  "example": {
+    "degrees": {"short": [2], "full": [1, 2, 3]},
+    "t_final": {"short": 0.04, "full": 0.1},
+    "uniform_meshes": {"short": [12, 24], "full": [16, 24, 32]},
+    "dofmax": {
+      "paper": {"short": {"2": 40000}, "full": {"1": 130000, "2": 100000, "3": 100000}},
+      "legacy": {"short": {"1": 12000, "2": 12000}, "full": {"1": 40000, "2": 40000, "3": 40000}}
+    },
+    "presets": {
+      "paper": {"theta_ref": 0.25, "tol": {"1": 2e-3, "2": 3e-4, "3": 3e-5}},
+      "legacy": {"max_levels": 23, "tol": 0.0}
+    }
+  }
+}
