@@ -1,16 +1,19 @@
 # adaptdg
 
-Adaptive stabilised discontinuous-Galerkin (DG) / residual-minimisation transport and PDE solvers
-on FEniCSx. It is the successor of AS-FEM and covers transport only, with no chemistry.
+adaptdg is a Python library for adaptive stabilised discontinuous-Galerkin (DG) transport and PDE solvers on FEniCSx
+(DOLFINx 0.11). It discretises advection-diffusion-reaction problems with DG and minimises the residual in a dual DG
+norm, which gives a stable solution and an error indicator that drives adaptive mesh refinement (Dörfler marking). It
+includes a variational multiscale (VMS) reconstruction for stationary and unsteady problems (backward Euler and BDF2) in
+2D and 3D, with linear and nonlinear (Burgers) cases; 1D and 2D transient transport with conservative mesh-to-mesh
+transfer; and drivers for two reactive-transport benchmarks, where the chemistry enters through callbacks and adaptdg
+itself contains no chemistry.
+
+It is an updated implementation of the method of Giraldo & Calo (2023, *Computer Methods in Applied Mechanics and
+Engineering* 417:116285, [doi:10.1016/j.cma.2023.116285](https://doi.org/10.1016/j.cma.2023.116285)), which is its
+reference. The cases in `examples/vms` reproduce the examples of the paper and report the errors against the exact
+solution and against its DG(p) projection. It is the successor of AS-FEM.
 
 Status: alpha.
-
-## Summary
-
-adaptdg discretises advection-diffusion-reaction problems with DG and minimises the residual in a
-dual DG norm. This gives a stable solution and, at the same time, an error indicator that drives
-adaptive mesh refinement. A variational multiscale reconstruction is available for stationary
-problems, and time-dependent transport runs with adaptive meshes in 1D and 2D.
 
 ## What is inside
 
@@ -74,25 +77,6 @@ discretisation and the adaptive loop (degree, marking, refinement).
 
 [asrtm-phreeqc](https://github.com/jfgiraldoa/asrtm-phreeqc) (ASRTM-PHREEQC) uses adaptdg as its transport
 backend and couples the PHREEQC chemistry; adaptdg itself has no chemistry.
-
-## History
-
-adaptdg continues AS-FEM. The original FEniCS 2019 code and its benchmarks are kept in the git tag
-`asfem-legacy`. Port status: Poisson / re-entrant corner, heterogeneous, anisotropic, Fichera, the Poisson FEM baseline and the steady
-Eriksson-Johnson problem (2D and 3D) and both Burgers equations and the unsteady Eriksson-Johnson problem (BE and BDF2 with adaptive refinement in space) are ported: all the VMS cases of the legacy benchmarks are now available.
-
-## Relation to the VMS paper
-
-adaptdg is an updated implementation of the method of Giraldo & Calo (2023), and the paper is its reference.
-
-- **To reproduce the paper**, run the cases in `examples/vms`. They use the `legacy` preset and report errors against the
-  DG(p) projection of the exact solution, the choices of the original code behind the published figures. Platform, solvers
-  and mesh refinement differ, so the numbers are close to the published ones without being identical.
-- **For your own work**, the library defaults are unchanged: the `paper` preset, which follows the equations as printed, and
-  the columns `L2`, `Vh` against the exact solution (`L2_proj`, `Vh_proj` against the projection).
-
-Against the exact solution, the improvement of `phi` over `theta` in the Vh norm does not appear, and the Vh errors of the
-anisotropic case are several times lower than those published. See `docs/VMS.md`.
 
 ## How to cite
 
