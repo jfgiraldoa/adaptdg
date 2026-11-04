@@ -44,6 +44,7 @@ class UnsteadySettings(LoopSettings):
     t_final: float = 0.1
     initial_refinements: int = 0  # uniform refinements of the start mesh before the first step
     reconstruct: bool = True
+    level_errors: bool = False  # also measure the errors on every level of the last step (columns of ``levels``)
 
 
 def step_coefficients(scheme: str, dt: float) -> tuple[float, float, tuple[float, ...]]:
@@ -230,6 +231,9 @@ class UnsteadyLoop:
                 work += res.ndofs
                 self.levels.append({"step": k, "level": level, "t": t, "ndofs": res.ndofs, "ncells": ncells,
                                     "E": res.E, "time": time.time() - tl})
+                if s.level_errors and k == self.nsteps:
+                    vms = reconstruct(res, adjoint_ordering=ordering, solver=s.solver) if s.reconstruct else None
+                    self.levels[-1].update(history_columns(error_targets(res, problem, s.p, degree=qdeg, vms=vms, targets=targets)))
                 done = (level + 1 == s.max_levels or res.E <= s.tol or s.refinement == "uniform"
                         or (s.dofmax is not None and res.ndofs >= s.dofmax))
                 if done:

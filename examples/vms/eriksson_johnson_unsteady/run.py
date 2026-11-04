@@ -65,7 +65,8 @@ def run_one(pspec: dict, nspec: dict, out: Path, tag: str, progress=None) -> dic
     history = loop.run(progress, on_step=save_mesh)
     elapsed = time.time() - t0
     write_csv(out / f"steps_{tag}.csv", history)
-    write_csv(out / f"levels_{tag}.csv", loop.levels)
+    last_step = [r for r in loop.levels if r["step"] == loop.nsteps]
+    write_csv(out / f"levels_{tag}.csv", [{k: r.get(k, "") for k in last_step[0]} for r in loop.levels])
     last, ndofs = history[-1], [r["ndofs"] for r in history]
     ratio = {t: last[f"Vh_phi{t}"] / last[f"Vh_theta{t}"] for t in SUFFIXES if f"Vh_phi{t}" in last}
     return {"preset": settings.preset, "p": settings.p, "kappa": pspec["kappa"], "integrator": settings.integrator,
@@ -88,6 +89,8 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--steps", type=int, help="number of time steps (overrides --t-final)")
     ap.add_argument("--dofmax", type=int, help="override the DoF cap per time step of every adaptive run")
     ap.add_argument("--no-uniform", action="store_true", help="skip the uniform-mesh reference runs")
+    ap.add_argument("--max-levels", type=int, help="override the solves per time step of the adaptive runs")
+    ap.add_argument("--level-errors", action="store_true", help="measure the errors on every level of the last step")
     args = ap.parse_args(argv)
 
     pspec = json.loads((HERE / "problem.json").read_text())
@@ -114,6 +117,9 @@ def main(argv: list[str] | None = None) -> None:
                 "tol": nspec["tol"] if not isinstance(nspec["tol"], dict) else nspec["tol"][str(p)]}
         if ref == "adaptive":
             spec["dofmax"] = args.dofmax or extra["dofmax"][args.preset][mode][str(p)]
+            if args.max_levels:
+                spec["max_levels"] = args.max_levels
+            spec["level_errors"] = args.level_errors
         else:
             spec.update(initial_mesh_size=n, max_levels=1, dofmax=None, tol=0.0)
         summary.append(run_one(pspec, spec, out, tag, progress=lambda s: print("  " + s, flush=True)))

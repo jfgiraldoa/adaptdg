@@ -24,7 +24,7 @@ def parse_args(argv=None):
 
 def main(full: bool = False, degrees=None, dofmax=None) -> None:
     levels = {1: 7, 2: 6, 3: 6} if full else {1: 6, 2: 6, 3: 6}  # about 9e5 DoF at most (full)
-    uniform = [(p, "uniform", dofmax or (1_000_000 if full else 150_000), levels[p]) for p in degrees or (1, 2, 3)]
+    uniform = [(p, "uniform", dofmax or (1_000_000 if full else 150_000), levels.get(p, 5)) for p in degrees or (1, 2, 3)]
     ada_p = degrees or ((1, 2, 3) if full else (1, 2))
     adaptive = [(p, "adaptive", dofmax or (200_000 if full else 20_000), 80) for p in ada_p]
     jobs = uniform + adaptive
