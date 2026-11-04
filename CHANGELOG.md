@@ -6,6 +6,8 @@ versioning: Semantic Versioning.
 ## [Unreleased]
 
 ### Added
+- `examples/vms/burgers_isotropic`: `p = 4` in `--full` (150000 DoF cap; paper Fig. 15): `L2`/`Vh` slopes -5.3/-4.5. The `L2` plateau of `theta` at `p = 3, 4`
+  was checked on a frozen mesh (quadrature, Newton tolerances) and is a mesh-resolution effect, not an error-measurement artifact (README).
 - `adaptdg.vms.unsteady` (`UnsteadyLoop`, `UnsteadySettings`) and the problem `ErikssonJohnsonUnsteady`: backward Euler and BDF2 for the
   residual-minimisation scheme with adaptive refinement in space at every time step (per-step tolerance, level and DoF caps), L2-projection history
   transfer between meshes, per-step errors in both targets for `ubar`, `theta`, `u`, `phi`; optional `time_coeffs` and Neumann data

@@ -15,7 +15,7 @@ L2 projection (suffix `_proj`, what the original code measured).
 
     python run.py                  # short: p = 1, 2, about 10000 / 12000 DoF, about 30 s, < 0.5 GB
     python run.py --preset legacy  # the same with the choices of the original implementation
-    python run.py --full           # p = 1, 2, 3 up to 60000 / 80000 / 100000 DoF (see "Time and memory")
+    python run.py --full           # p = 1, 2, 3, 4 up to 60000 / 80000 / 100000 / 150000 DoF (see "Time and memory")
     python run.py --kappa 1e-2     # another diffusivity
     python plot.py                 # errors_k*.png and fields_k*.png in out/<preset>/
 
@@ -90,6 +90,16 @@ On one mesh the discrete problem has more than one solution; which one Newton re
 previous level, damping, the Jacobian choice), and `L2` of `ubar` changes by up to 50% between them (the L2 columns jump from
 level to level, see the L2 panels). The estimator `E` agrees to 3-4 digits between them and is the number to quote. Failed Newton
 levels are drawn with a red cross in `errors_k*.png`.
+
+## Degree 4 and the `theta` plateau (paper Fig. 15, station, 2026-11-04)
+
+`p = 4` (paper preset, 150000 DoF cap): 44/44 levels converge (1-10 iterations), last level 156665 DoF, `E` 2.9e-7, `L2` of `ubar` 1.3e-7,
+`Vh` 4.4e-6; slopes against DoF^(1/2) over the last 2x window: `L2` -5.3 (optimal -5), `Vh` -4.5 (optimal -4), `E` -3.9; 129 s, 1.8 GB.
+At `p = 3, 4` the `L2` of `theta`, `u` and `phi` flattens (2.2e-6 at 110000 DoF, 1.6e-7 at `p = 4`) while that of `ubar` and `Vh` keep decreasing.
+This is not a measurement artifact: on the last `p = 3` mesh (frozen) raising the error quadrature from 12 to 24 and tightening the Newton
+tolerances of `ubar` and `theta` (`|du|` 1e-14, `|R|` 1e-16) change `L2(theta)` in no digit, and one uniform refinement lowers it
+from 2.24e-6 to 1.5e-7 (rate 3.9 = p + 1). The error of `theta` sits in the tails of the layer (72% within 6 layer widths, 28% beyond), where
+the estimator (driven by `ubar`) no longer refines; the L2 projection of the exact solution is 3.8e-7 on that mesh.
 
 ## Time and memory of `--full`
 

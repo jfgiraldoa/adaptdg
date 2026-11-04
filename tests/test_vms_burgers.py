@@ -311,6 +311,7 @@ def test_isotropic_example_files():
     assert isinstance(prob, BurgersIsotropic) and prob.has_exact and prob.diffusivity == pytest.approx(1e-3)
     assert prob.velocity == (1.0, 1.0) and prob.dirichlet_tags == (1, 2, 3, 4) and prob.outflow_tags == ()
     assert pspec["initial_mesh_size"] == 6 and numerics["reconstruct"] and numerics["error_targets"] == "both"
+    assert numerics["example"]["degrees"]["full"] == [1, 2, 3, 4] and numerics["example"]["dofmax"]["full"]["4"] == 150000
     for preset in ("paper", "legacy"):
         nspec = {k: v for k, v in numerics.items() if k != "example"}
         nspec.update(numerics["example"]["presets"][preset], preset=preset)

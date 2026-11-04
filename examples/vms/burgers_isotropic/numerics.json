@@ -12,8 +12,8 @@
   "preset": "paper",
   "error_targets": "both",
   "example": {
-    "degrees": {"short": [1, 2], "full": [1, 2, 3]},
-    "dofmax": {"short": {"1": 10000, "2": 12000}, "full": {"1": 60000, "2": 80000, "3": 100000}},
+    "degrees": {"short": [1, 2], "full": [1, 2, 3, 4]},
+    "dofmax": {"short": {"1": 10000, "2": 12000}, "full": {"1": 60000, "2": 80000, "3": 100000, "4": 150000}},
     "presets": {
       "paper": {"theta_ref": 0.25},
       "legacy": {"newton": {"maxit": 400}}
