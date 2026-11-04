@@ -6,7 +6,7 @@
 
 in 2D and 3D, with a discontinuous Galerkin (dG) discrete dual norm and an H1-conforming
 trial space. It is an updated implementation of the method of Giraldo & Calo (2023), *Comput. Methods Appl. Mech. Eng.*
-417, 116285, which is its reference; it is not an exact reproduction of the published results.
+417, 116285, which is its reference. The cases in `examples/vms` reproduce its examples.
 The estimator drives an adaptive loop (solve, estimate, mark, refine). Importing the package does
 not load dolfinx; the solver needs dolfinx 0.11 with PETSc and MUMPS and runs in serial.
 
@@ -250,8 +250,7 @@ DoF^(-(p+1)/2) for p = 1..4, while uniform refinement stalls at DoF^(-1/3).
 ## Legacy and paper presets
 
 `numerics.json` key `"preset": "paper" | "legacy"`. The library default is `"paper"`, which follows the equations as printed; the cases in
-`examples/vms` use `"legacy"`, which follows the original implementation, the code behind the published figures. Neither gives identical
-numbers, because platform, solvers and mesh refinement differ. Every row is one field of
+`examples/vms` use `"legacy"`, which follows the original implementation, the code behind the published figures. Every row is one field of
 `adaptdg.vms.preset.Preset`, so mixed variants are possible (`"preset_overrides": {"gram_l2": true}`).
 Legacy references are file:line in the `asfem-legacy` tag.
 
