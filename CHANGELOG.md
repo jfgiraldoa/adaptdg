@@ -7,6 +7,7 @@ versioning: Semantic Versioning.
 
 ### Changed
 - `CITATION.cff`: longer abstract, with the DOI of the VMS paper.
+- Docs: the errors against the exact solution are presented as the addition of this version to the DG(p) projection measure of the paper's figures.
 
 ## [0.1.1] - 2026-11-04
 

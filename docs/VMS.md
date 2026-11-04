@@ -59,7 +59,8 @@ than `theta` with the same slope. Both targets are reported by default (see "Err
 `norms.error_targets` returns, for `ubar` and (with `vms`) `theta`, `u`, `phi`, the L2 and Vh errors against
 `exact` (the exact solution) and `projection` (its L2 projection onto DG(p), solved with MUMPS using the quadrature
 degree of the error). History columns: `L2, Vh, L2_theta, ...` against the exact solution and the same names with the
-suffix `_proj` against the projection (`LoopSettings.error_targets = "exact"` skips the projection).
+suffix `_proj` against the projection (`LoopSettings.error_targets = "exact"` skips the projection). The projection is the measure of the
+paper's figures; the exact-solution columns are the addition of this version. The cases in `examples/vms` lead with the projection columns.
 
 ## Other cases
 
@@ -270,10 +271,11 @@ Legacy references are file:line in the `asfem-legacy` tag.
 
 * `beta = (1, 0)` is used in the heterogeneous case because the exact solution needs it; the paper prints `(0, 1)`.
 * The Gram form uses the energy form `kappa |grad w|^2` in eq. (14), as the legacy code did.
-* The published figures measure errors against the DG(p) L2 projection of the exact solution, the target of the legacy
-  postprocessing. Against the exact solution, `phi` is 1.1-1.26 times worse than `theta` in the Vh norm, and the Vh errors of
-  the anisotropic case are 3.8-10 times lower than those published (median factor, Figs. 7 and 8). With the `legacy` preset and
-  the projection target that factor is 1.06 and 1.13. See "Error targets" and "Legacy and paper presets".
+* Error targets (improvement in this version): the paper's figures measure the error against the DG(p) L2 projection of the exact
+  solution, and the cases in `examples/vms` reproduce them with the `legacy` preset and that target (median factor 1.06 and 1.13 for the
+  anisotropic Vh errors of Figs. 7 and 8). This version also reports the error against the exact solution itself, the true error of the
+  discrete solution, in every case and every field. It adds information on top of the paper's measure: for instance, against the exact
+  solution `phi` is within 1.1-1.26 of `theta` in the Vh norm. See "Error targets" and "Legacy and paper presets".
 
 ## Running every example
 

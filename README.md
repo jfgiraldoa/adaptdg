@@ -10,8 +10,8 @@ itself contains no chemistry.
 
 It is an updated implementation of the method of Giraldo & Calo (2023, *Computer Methods in Applied Mechanics and
 Engineering* 417:116285, [doi:10.1016/j.cma.2023.116285](https://doi.org/10.1016/j.cma.2023.116285)), which is its
-reference. The cases in `examples/vms` reproduce the examples of the paper and report the errors against the exact
-solution and against its DG(p) projection. It is the successor of AS-FEM.
+reference. The cases in `examples/vms` reproduce the examples of the paper with the DG(p) projection measure of its figures. This version also reports the
+error against the exact solution itself. It is the successor of AS-FEM.
 
 Status: alpha.
 
