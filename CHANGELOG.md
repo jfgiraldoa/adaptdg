@@ -5,6 +5,10 @@ versioning: Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-04
+
+First public release (alpha).
+
 ### Changed
 - Modules moved into subpackages, without changes to the numerics: `adaptdg.transport` (`one_d`, `two_d`, `dg_2d`, `rm_1d`, `rm_2d`),
   `adaptdg.transfer` (`one_d`, `two_d`, `f2a`, `history_projection`, `history_projection_fast`), `adaptdg.loops` (`one_d`, `two_d`, `fastadap`,

@@ -1,8 +1,7 @@
-# Publishing is only triggered by a v* tag that Juan creates manually.
+# PyPI publishing is started by hand from the Actions tab; a v* tag or a GitHub release (Zenodo) does not trigger it.
 name: Release
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
 
 jobs:
   build:

@@ -1,14 +1,16 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "adaptdg"
-version: 0.0.1
+version: 0.1.0
 authors:
   - family-names: "Giraldo Avila"
     given-names: "Juan Felipe"
+    orcid: "https://orcid.org/0000-0002-1902-2555"
 license: MIT
 repository-code: "https://github.com/jfgiraldoa/adaptdg"
-# TODO: software doi and date-released with the first release
-abstract: "Adaptive stabilised discontinuous-Galerkin / residual-minimisation transport and PDE solvers on FEniCSx."
+date-released: 2026-11-04
+# TODO: software doi (assigned by Zenodo when the v0.1.0 release is published)
+abstract: "Adaptive stabilised discontinuous-Galerkin / residual-minimisation transport and PDE solvers on FEniCSx. Updated implementation of the variational multiscale method of Giraldo and Calo (2023), which is its reference; not an exact reproduction of the published results."
 references:
   - type: article
     title: "An Adaptive in Space, Stabilized Finite Element Method via Residual Minimization for Linear and Nonlinear Unsteady Advection-Diffusion-Reaction Equations"
