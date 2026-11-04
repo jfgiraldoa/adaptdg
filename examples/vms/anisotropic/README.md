@@ -31,4 +31,5 @@ resolved, and are still pre-asymptotic for r = 1e6):
 * The mesh concentrates around `y = 0`: for r = 1e6 (p = 1) about 40 % of the cells and of the marked
   cells lie in `|y| < 2/sqrt(r tau)`, a band of 13 % of the area. For r = 1e4 the layer is wide
   (that band is the whole domain) and the concentration is mild.
+* The L2 errors agree with the paper; the Vh errors are lower than those published (up to about 20 times for r = 1e6), for a cause not identified.
 * `phi` is a little better than the dG solution in L2 (about 0.85-0.95) and a little worse in Vh (1.07-1.17).

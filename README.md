@@ -81,6 +81,14 @@ adaptdg continues AS-FEM. The original FEniCS 2019 code and its benchmarks are k
 `asfem-legacy`. Port status: Poisson / re-entrant corner, heterogeneous, anisotropic, Fichera, the Poisson FEM baseline and the steady
 Eriksson-Johnson problem (2D and 3D) and both Burgers equations and the unsteady Eriksson-Johnson problem (BE and BDF2 with adaptive refinement in space) are ported: all the VMS cases of the legacy benchmarks are now available.
 
+## Relation to the VMS paper
+
+adaptdg is an updated implementation of the method of Giraldo & Calo (2023), and the paper is its reference. It is not
+an exact reproduction of the published results: the platform, solvers and mesh refinement differ, so meshes and errors
+differ level by level. Compared with the published figures, the known differences are in what is measured. The `phi`
+improvement over `theta` in the Vh norm appears only against the DG(p) projection of the exact solution, and the Vh
+errors of the anisotropic case are lower than those published, while its L2 errors agree. See `docs/VMS.md`.
+
 ## How to cite
 
 Cite the software through `CITATION.cff` (a DOI will be added with the first release) and the VMS

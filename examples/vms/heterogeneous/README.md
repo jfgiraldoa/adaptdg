@@ -34,5 +34,5 @@ Slopes of the error against DoF^(1/2) over the last levels of the short run (uni
 
 * For even p the coarse L2 error of `ubar` loses the optimal rate; `u` and `phi` recover it.
 * `phi` has the smallest L2 error on the same mesh (about 0.75-0.8 of the dG error); its Vh error is
-  about 1.1-1.2 times the dG one (the paper reports an improvement; not reproduced in this norm).
+  about 1.1-1.2 times the dG one (the paper reports an improvement, which appears here only against the DG(p) projection of the exact solution).
 * `u = ubar + utilde` and the dG solution `theta` have the same errors (equal to round-off).

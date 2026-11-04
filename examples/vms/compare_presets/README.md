@@ -7,7 +7,7 @@ heterogeneous diffusion-advection with uniform refinement) for p = 1, 2 under bo
 * `exact`: the exact solution (the true error);
 * `projection`: its DG(p) L2 projection (what the original implementation measured).
 
-The `paper` preset is the package default; `legacy` reproduces the choices of the original code
+The `paper` preset is the package default; `legacy` follows the choices of the original code
 (no L2 term in the diffusion Gram form, interior penalty `k1 k2/(k1+k2)`, quadrature degree 8,
 fixed-fraction marking with ratio 0.25, adjoint ordering `b(v, eps')`); see "Legacy and paper presets"
 in `docs/VMS.md`. Individual differences can be switched with `preset_overrides` in `numerics.json`.

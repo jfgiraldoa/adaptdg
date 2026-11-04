@@ -55,5 +55,5 @@ Settings live in `problem.json` and `numerics.json` (the usual `LoopSettings` ke
 * The 3D variant is strongly pre-asymptotic at kappa = 1e-2 with 2e4 DoF (the layer needs h of about 0.01): slopes of
   about -0.8 are trends, not rates.
 * The uniform runs refine by halving, so their last levels overshoot `dofmax` (4-5 levels).
-* The legacy preset reproduces the forms, marking rule and quadrature, not the mesh refinement or the solver of the
+* The legacy preset follows the forms, marking rule and quadrature, not the mesh refinement or the solver of the
   original test (FEniCS 2019 `refine`), so level-by-level numbers differ from the original.

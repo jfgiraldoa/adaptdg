@@ -5,7 +5,8 @@
     -div(kappa grad u) + beta . grad u = f   in Omega,   u = u_D on the Dirichlet boundary
 
 in 2D and 3D, with a discontinuous Galerkin (dG) discrete dual norm and an H1-conforming
-trial space, following Giraldo & Calo (2023), *Comput. Methods Appl. Mech. Eng.* 417, 116285.
+trial space. It is an updated implementation of the method of Giraldo & Calo (2023), *Comput. Methods Appl. Mech. Eng.*
+417, 116285, which is its reference; it is not an exact reproduction of the published results.
 The estimator drives an adaptive loop (solve, estimate, mark, refine). Importing the package does
 not load dolfinx; the solver needs dolfinx 0.11 with PETSc and MUMPS and runs in serial.
 
@@ -67,7 +68,7 @@ suffix `_proj` against the projection (`LoopSettings.error_targets = "exact"` sk
 `beta = (0, 1)` but the exact solution (39)-(40) is a function of `x` solving `-(eps u')' + u' = 0`, so the
 implementation uses `beta = (1, 0)`. The diffusivity of `Heterogeneous` is a DG0 tensor field (the SWIP weights need
 different values on the two sides of a facet) and its start mesh needs an even number of cells per side so that
-`x = 1/2` consists of mesh facets (preserved by bisection). `refinement = "uniform"` reproduces the original
+`x = 1/2` consists of mesh facets (preserved by bisection). `refinement = "uniform"` follows the original
 uniform runs. Linear problems: Dirichlet boundaries only (the nonlinear forms add outflow faces, see the Burgers section).
 
 ## Fichera 3D
@@ -249,7 +250,7 @@ DoF^(-(p+1)/2) for p = 1..4, while uniform refinement stalls at DoF^(-1/3).
 ## Legacy and paper presets
 
 `numerics.json` key `"preset": "paper" | "legacy"` (default `"paper"`, the behaviour of all releases so far).
-`legacy` reproduces the choices of the original implementation; every row is one field of
+`paper` follows the method as published, in this updated implementation; `legacy` follows the choices of the original implementation. Neither is an exact reproduction of the published numbers. Every row is one field of
 `adaptdg.vms.preset.Preset`, so mixed variants are possible (`"preset_overrides": {"gram_l2": true}`).
 Legacy references are file:line in the `asfem-legacy` tag.
 

@@ -1,8 +1,8 @@
 """Presets: the choices of the paper versus those of the original (legacy) implementation.
 
 Each difference is one field of :class:`Preset`, so mixed variants are obtained with
-``resolve_preset("legacy", gram_l2=True)``. ``"paper"`` is the package default and reproduces the
-behaviour of every release so far; ``"legacy"`` reproduces the original code (see the table
+``resolve_preset("legacy", gram_l2=True)``. ``"paper"`` is the package default and keeps the
+behaviour of every release so far; ``"legacy"`` follows the choices of the original code (see the table
 "Legacy and paper presets" in ``docs/VMS.md``). Pure Python: no dolfinx import.
 """
 

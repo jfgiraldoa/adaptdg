@@ -59,6 +59,6 @@ u = ubar + utilde and phi (adjoint reconstruction); it works in 3D at p = 1, 2 a
 * Adaptive histories are stepped (marking adds cells in bursts), so slopes of single windows fluctuate by a few
   tenths, more so with the legacy preset, which reaches the cap in fewer, larger steps.
 * The uniform runs solve the structured meshes n = 2, 4, 6, ... (more points than halving h at 8x cost per level).
-* The legacy preset reproduces the forms, marking rule and quadrature, not the mesh refinement or the solver of
+* The legacy preset follows the forms, marking rule and quadrature, not the mesh refinement or the solver of
   the original test (unstructured start mesh with characteristic length 0.2, FEniCS 2019 `refine`, an iterative
   solver and a quadrature-element forcing), so level-by-level numbers differ from the original.
