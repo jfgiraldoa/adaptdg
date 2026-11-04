@@ -17,7 +17,7 @@ from typing import Any, Mapping
 import numpy as np
 from scipy.spatial import cKDTree
 
-from adaptdg.transport_2d import (
+from adaptdg.transport.two_d import (
     create_rectangle_mesh_2d,
     mesh_triangles,
     refine_marked_triangles,

@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from adaptdg.transfer import (
+from adaptdg.transfer.one_d import (
     ConservativeRemapCache1D,
     ConservativeRemapPlan1D,
     cell_averages_to_p1_nodes,

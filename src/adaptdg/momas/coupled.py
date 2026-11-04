@@ -13,8 +13,8 @@ Chemistry cells: one per triangle (groups=None) or one per group of triangles
   that group is scaled instead (c_i *= reacted / transported), also conservative.
 
 Deviations from the source (outside numerics): ``ConservativeDG2D`` comes from
-``adaptdg.transport_dg2d``; the chemistry enters through the keyword-only argument ``chemistry`` of
-``run_coupled`` (protocol :class:`adaptdg.loop_momas.ChemistryMomas`) instead of
+``adaptdg.transport.dg_2d``; the chemistry enters through the keyword-only argument ``chemistry`` of
+``run_coupled`` (protocol :class:`adaptdg.momas.loop.ChemistryMomas`) instead of
 ``EasyModel.read(.../spec.json)``, ``FastAnchorMomasPhreeqcRM`` and ``MomasEasyPhreeqcRM``; the ``sys.path`` hack and
 ``WS``/``REPO`` are gone. adaptdg imports no chemistry.
 """
@@ -26,7 +26,7 @@ import time as clock
 
 import numpy as np
 
-from adaptdg.transport_dg2d import ConservativeDG2D
+from adaptdg.transport.dg_2d import ConservativeDG2D
 
 POSITIVE = (0, 2, 3)
 

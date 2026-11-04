@@ -23,8 +23,8 @@ import warnings
 
 import numpy as np
 
-from adaptdg.f2a import F2AHistory, F2AOptions
-from adaptdg.fastadap import (
+from adaptdg.transfer.f2a import F2AHistory, F2AOptions
+from adaptdg.loops.fastadap import (
     FastOptions,
     FastPath,
     fast_mesh_triangles,
@@ -32,13 +32,13 @@ from adaptdg.fastadap import (
 )
 from adaptdg.flow import FlowState
 from adaptdg.marking import dorfler_union_2d
-from adaptdg.mesh import (
+from adaptdg.loops.mesh_policy import (
     ReactiveTransportPolicy2D,
     _triangle_restart_permutation,
     create_predictive_reactive_mesh_2d,
     persistent_mesh_rebuild_required,
 )
-from adaptdg.transfer_2d import (
+from adaptdg.transfer.two_d import (
     conservative_remap_plan_2d,
     refine_conservative_remap_plan_2d,
     rectangles_to_triangles,
@@ -48,7 +48,7 @@ from adaptdg.transfer_2d import (
     triangles_to_rectangles,
     use_plan_builder,
 )
-from adaptdg.transport_2d import (
+from adaptdg.transport.two_d import (
     ResidualMinimizationBackwardEuler2D,
     StabilizedTransportStep2D,
     create_mesh_from_triangles_2d,
@@ -366,7 +366,7 @@ def solve_one_adaptive_transport_step_2d(
         raise ValueError("Backward Euler accepts no older_chemistry")
 
     # F2A (P2): children of an in-step refinement inherit the exact restriction of the parent
-    # DG1 history. Fast path: solver cache, vectorised mesh helpers (see adaptdg.fastadap).
+    # DG1 history. Fast path: solver cache, vectorised mesh helpers (see adaptdg.loops.fastadap).
     make_solver = (
         ResidualMinimizationBackwardEuler2D if fast is None else fast.solver_factory
     )
@@ -1571,10 +1571,10 @@ def run_adaptive_loop_2d(
     ``history_policy`` ("rebuild", the default, or "f2a") selects what happens to the
     DG1 reaction history (``reaction_increment_history=True``) when the persistent mesh
     is rebuilt or refined: "rebuild" restarts it from chemistry-grid averages; "f2a" is the
-    history-preserving mesh rebuild of :mod:`adaptdg.f2a` (``f2a_options`` switches its three
+    history-preserving mesh rebuild of :mod:`adaptdg.transfer.f2a` (``f2a_options`` switches its three
     changes P1, P2 and P3 individually; all on by default). ``fast`` (True or a
-    :class:`adaptdg.fastadap.FastOptions`) selects the cost-only fast path of
-    :mod:`adaptdg.fastadap`; results agree with the plain path to round-off.
+    :class:`adaptdg.loops.fastadap.FastOptions`) selects the cost-only fast path of
+    :mod:`adaptdg.loops.fastadap`; results agree with the plain path to round-off.
     ``AdaptiveRun2D.statistics`` reports the counters of both when used.
     """
 

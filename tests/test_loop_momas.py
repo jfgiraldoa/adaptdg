@@ -100,7 +100,7 @@ def _dorfler_union_inline(indicators, sizes, h_chem, theta, eligibility_factor, 
 
 
 def test_loop_uses_exact_dorfler_adapter():
-    import adaptdg.loop_momas as loop_momas
+    import adaptdg.momas.loop as loop_momas
 
     rng = np.random.default_rng(3)
     for _ in range(300):
@@ -117,7 +117,7 @@ def test_loop_uses_exact_dorfler_adapter():
 
 def test_import_isolation():
     code = (
-        "import sys, adaptdg, adaptdg.loop_momas, adaptdg.coupled_momas;"
+        "import sys, adaptdg, adaptdg.momas.loop, adaptdg.momas.coupled;"
         "bad = [m for m in ('dolfinx', 'phreeqcrm', 'asrtm_dg', 'asrtm_phreeqc') if m in sys.modules];"
         "print(bad); sys.exit(1 if bad else 0)"
     )
@@ -126,7 +126,7 @@ def test_import_isolation():
 
 
 def test_protocols_document_the_engine_interface():
-    import adaptdg.loop_momas as loop_momas
+    import adaptdg.momas.loop as loop_momas
 
     assert hasattr(loop_momas, "ChemistryMomas") and hasattr(loop_momas, "EngineMomas")
     assert "react" in loop_momas.EngineMomas.__dict__ and "open_chemistry" in loop_momas.ChemistryMomas.__dict__
@@ -134,7 +134,7 @@ def test_protocols_document_the_engine_interface():
 
 def test_adaptive_run_with_fake_chemistry(capsys):
     pytest.importorskip("dolfinx")
-    import adaptdg.loop_momas as loop_momas
+    import adaptdg.momas.loop as loop_momas
 
     def go():
         chem = FakeChemistry()
@@ -155,7 +155,7 @@ def test_adaptive_run_with_fake_chemistry(capsys):
 
 def test_uniform_run_with_fake_chemistry():
     pytest.importorskip("dolfinx")
-    import adaptdg.coupled_momas as coupled_momas
+    import adaptdg.momas.coupled as coupled_momas
     from adaptdg import flow as darcy
 
     flow = darcy.solve_momas_darcy(1)

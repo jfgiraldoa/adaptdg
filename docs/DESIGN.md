@@ -14,25 +14,25 @@ new FEniCSx implementation of the AS-FEM / variational multiscale method of the 
 
 - `adaptdg.vms`: stationary adaptive residual-minimisation solver and VMS reconstruction
   (`docs/VMS.md`).
-- `adaptdg.transport`: 1D DG1/CG1 transport (`ConservativeDG1D`, residual-minimisation transport
+- `adaptdg.transport.one_d`: 1D DG1/CG1 transport (`ConservativeDG1D`, residual-minimisation transport
   with adaptive cells). Unit conventions are those of the original solvers and are not harmonised:
   each solver documents which units its arguments use, and the caller supplies them consistently.
-- `adaptdg.transport_2d`, `adaptdg.transport_dg2d`, `adaptdg.rm_transport`: 2D residual-minimisation
+- `adaptdg.transport.two_d`, `adaptdg.transport.dg_2d`, `adaptdg.transport.rm_2d`: 2D residual-minimisation
   transport, general 2D conservative DG1 with tensor dispersion, and the 2D RM step. The error
   indicator (residual representation in the dual DG norm) is built into the step.
-- `adaptdg.rm_1d`, `adaptdg.loop_1d`: 1D residual-minimisation operator and adaptive loop
+- `adaptdg.transport.rm_1d`, `adaptdg.loops.one_d`: 1D residual-minimisation operator and adaptive loop
   (numpy/scipy only).
 - `adaptdg.flow`: Darcy RT0-DG0 solver and `FlowState`.
-- `adaptdg.transfer`, `adaptdg.transfer_2d`: conservative remap of DG1 fields between meshes.
+- `adaptdg.transfer.one_d`, `adaptdg.transfer.two_d`: conservative remap of DG1 fields between meshes.
 - `adaptdg.marking`: Dörfler marking core `dorfler_union` (minimum size, epsilon and tie hooks,
   optional post-mark filter) and adapters for the 1D, 2D, MoMaS and 1D-loop variants. The variants
   differ in tie rules, eligibility and normalisation; they are kept as they are, and defaults
   (epsilon, eligibility factor, tie tolerance) are passed by the caller.
-- `adaptdg.mesh`, `adaptdg.loop`: persistent-mesh policy and the 2D adaptive loop
+- `adaptdg.loops.mesh_policy`, `adaptdg.loops.two_d`: persistent-mesh policy and the 2D adaptive loop
   (`run_adaptive_loop_2d`). Chemistry enters only through callbacks (`ChemistryCallbacks2D`:
   `snapshot` and `react` required, `seed_fields` and `solid_inventory` optional, plus a `boundary`
   dict); numerical settings live in `LoopSettings2D`.
-- `adaptdg.f2a`, `adaptdg.history_projection`, `adaptdg.history_projection_fast`: history-preserving mesh
+- `adaptdg.transfer.f2a`, `adaptdg.transfer.history_projection`, `adaptdg.transfer.history_projection_fast`: history-preserving mesh
   rebuild (F2A), `run_adaptive_loop_2d(..., history_policy="f2a")`. With the DG1 reaction history, the
   default policy restarts the history from chemistry-grid averages at every predictive-mesh rebuild and
   after every in-step refinement. F2A (P1) projects the current and older DG1 histories exactly (L2,
@@ -40,11 +40,11 @@ new FEniCSx implementation of the AS-FEM / variational multiscale method of the 
   nonnegative scaling that keeps the mean; (P2) gives the children of an in-step refinement the exact
   restriction of the parent history; (P3) rebuilds the last committed mesh when a run is resumed exactly at
   a rebuild step, so that P1 has an old mesh to project from. `F2AOptions` switches each change.
-- `adaptdg.fastadap`: cost-only fast path of the 2D loop (`fast=True`): solver and factorisation reuse on the
+- `adaptdg.loops.fastadap`: cost-only fast path of the 2D loop (`fast=True`): solver and factorisation reuse on the
   persistent mesh, vectorised history bookkeeping and transfer plans, multi-RHS back-solve (with F2A),
   vectorised `mesh_triangles` and a refinement without the MPI-communicator leak. The plans are built through
-  `adaptdg.transfer_2d.use_plan_builder`. Results agree with the plain path to round-off, not bit for bit.
-- `adaptdg.loop_momas`, `adaptdg.coupled_momas`: adaptive and uniform coupled 2D drivers; the
+  `adaptdg.transfer.two_d.use_plan_builder`. Results agree with the plain path to round-off, not bit for bit.
+- `adaptdg.momas.loop`, `adaptdg.momas.coupled`: adaptive and uniform coupled 2D drivers; the
   chemistry is a duck-typed protocol (`ChemistryMomas`, `EngineMomas`) that is documented, not enforced.
 - `adaptdg.case4`: evolving-porosity 1D transport (Xie et al. benchmark B2): ADAP variants, BDF2,
   DG history, positivity fixes, variable time step, FV baseline and the step-level coupling

@@ -23,7 +23,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from adaptdg.transport_dg2d import dispersion_tensor
+from adaptdg.transport.dg_2d import dispersion_tensor
 
 
 @dataclass

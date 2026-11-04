@@ -15,7 +15,7 @@ patching).
    coefficient functions filled through the collapse maps, and the DG0 indicator space is
    created once.
 4. Vectorised transfer plans. ``ConservativeRemapPlan2D.create`` is replaced (through
-   ``adaptdg.transfer_2d.use_plan_builder``) by a builder that clips every candidate
+   ``adaptdg.transfer.two_d.use_plan_builder``) by a builder that clips every candidate
    (triangle, rectangle) pair with the same Sutherland-Hodgman arithmetic, in arrays; same
    pairs in the same order, overlap areas equal to round-off (the shoelace sum order may
    differ in the last bits). With ``plan_reuse`` the rows of the previous plan are copied
@@ -36,7 +36,7 @@ from time import perf_counter
 
 import numpy as np
 
-from adaptdg.transport_2d import (
+from adaptdg.transport.two_d import (
     ResidualMinimizationBackwardEuler2D,
     StabilizedTransportStep2D,
 )
@@ -484,8 +484,8 @@ class FastPath:
         return solver
 
     def plan_create(self, cls, triangles, x_edges, y_edges, *, require_rectangle_coverage=True):
-        """Plan builder for ``adaptdg.transfer_2d.use_plan_builder`` (same plan as ``create``)."""
-        from adaptdg import transfer_2d as tr
+        """Plan builder for ``adaptdg.transfer.two_d.use_plan_builder`` (same plan as ``create``)."""
+        from adaptdg.transfer import two_d as tr
         started = perf_counter()
         tri = tr._triangles(triangles)
         x = tr._edges(x_edges, "x_edges")
@@ -497,8 +497,8 @@ class FastPath:
         rows = None
         if self.options.plan_reuse and require_rectangle_coverage and last["plan"] is not None \
                 and np.array_equal(last["x"], x) and np.array_equal(last["y"], y):
-            from adaptdg.history_projection import canonical_vertices
-            from adaptdg.history_projection_fast import match_identical
+            from adaptdg.transfer.history_projection import canonical_vertices
+            from adaptdg.transfer.history_projection_fast import match_identical
             old_plan = last["plan"]
             new_idx, old_idx, _ = match_identical(canonical_vertices(last["tri"]), canonical_vertices(tri))
             if new_idx.size:

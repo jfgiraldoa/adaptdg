@@ -15,7 +15,7 @@ unit convention of its origin (NOT harmonised, see docs/DESIGN.md):
   ``reference_porosity``.
 
 Deviations from the source: imports point to ``adaptdg`` (``ReusableLinearProblem``
-from ``adaptdg._linear``, ``conservative_remap_1d`` from ``adaptdg.transfer``,
+from ``adaptdg.transport._linear``, ``conservative_remap_1d`` from ``adaptdg.transfer.one_d``,
 ``dorfler_mark_1d`` from ``adaptdg.marking``, the adapter proven equal to the
 source function). dolfinx/ufl/basix/petsc4py/mpi4py were already imported lazily
 inside functions in the source and stay so.
@@ -29,9 +29,9 @@ from typing import Any
 
 import numpy as np
 
-from adaptdg._linear import ReusableLinearProblem
+from adaptdg.transport._linear import ReusableLinearProblem
 from adaptdg.marking import dorfler_mark_1d
-from adaptdg.transfer import conservative_remap_1d
+from adaptdg.transfer.one_d import conservative_remap_1d
 
 
 def transport_step(c_old: Any, flow: Any, dt: float, **options: Any) -> Any:

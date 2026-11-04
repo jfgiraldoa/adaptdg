@@ -7,13 +7,13 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from adaptdg.loop import (
+from adaptdg.loops.two_d import (
     ChemistryCallbacks2D,
     LoopSettings2D,
     prepare_chemistry_component_2d,
     run_adaptive_loop_2d,
 )
-from adaptdg.mesh import (
+from adaptdg.loops.mesh_policy import (
     ReactiveTransportPolicy2D,
     _triangle_restart_permutation,
     persistent_mesh_rebuild_required,
@@ -25,7 +25,7 @@ SHAPE = (6, 6)  # (ny, nx)
 
 def test_import_keeps_dolfinx_lazy():
     code = (
-        "import sys, adaptdg, adaptdg.loop, adaptdg.mesh;"
+        "import sys, adaptdg, adaptdg.loops.two_d, adaptdg.loops.mesh_policy;"
         "assert 'dolfinx' not in sys.modules and 'asrtm_phreeqc' not in sys.modules"
     )
     subprocess.run([sys.executable, "-c", code], check=True)

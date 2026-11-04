@@ -14,9 +14,9 @@ Dorfler marking, conservative transfer to the chemistry squares, positivity of t
 
 Deviations from the source (outside numerics):
 - ``dorfler_union`` is ``adaptdg.marking.dorfler_union_momas`` (the exact adapter of the inline original).
-- Imports point to adaptdg: ``adaptdg.flow`` (``darcy``), ``adaptdg.rm_transport``, ``adaptdg.transport``
-  (``nonnegative_means``), ``adaptdg.transport_2d`` (``triangle_characteristic_sizes``),
-  ``adaptdg.transfer_2d`` (``conservative_remap_plan_2d``).
+- Imports point to adaptdg: ``adaptdg.flow`` (``darcy``), ``adaptdg.transport.rm_2d``, ``adaptdg.transport.one_d``
+  (``nonnegative_means``), ``adaptdg.transport.two_d`` (``triangle_characteristic_sizes``),
+  ``adaptdg.transfer.two_d`` (``conservative_remap_plan_2d``).
 - The chemistry enters through the ``chemistry`` keyword-only argument of ``run`` (protocol
   :class:`ChemistryMomas`) instead of ``EasyModel.read(.../spec.json)``, ``FastAnchorMomasPhreeqcRM`` and
   ``MomasEasyPhreeqcRM``; adaptdg imports no chemistry. The constants of the source construction
@@ -34,7 +34,7 @@ import numpy as np
 
 from adaptdg import flow as darcy
 from adaptdg.marking import dorfler_union_momas as dorfler_union
-from adaptdg.rm_transport import RMTransportMoMaS2D
+from adaptdg.transport.rm_2d import RMTransportMoMaS2D
 
 
 class EngineMomas(Protocol):
@@ -286,9 +286,9 @@ def run(kc, regime, dt, end_time, save_times=(), solves=3, theta=0.5, eligibilit
         sing_radius=0.0, sing_min_size=0.0, checkpoint_dir=None, checkpoint_every=0, *, chemistry):
     from dolfinx import fem
     from dolfinx import mesh as dmesh
-    from adaptdg.transport import nonnegative_means
-    from adaptdg.transport_2d import triangle_characteristic_sizes
-    from adaptdg.transfer_2d import conservative_remap_plan_2d
+    from adaptdg.transport.one_d import nonnegative_means
+    from adaptdg.transport.two_d import triangle_characteristic_sizes
+    from adaptdg.transfer.two_d import conservative_remap_plan_2d
 
     spec = chemistry.spec
     mat = spec["materials"]

@@ -77,7 +77,7 @@ class AdaptivePorosityTransport:
         self.edges = np.linspace(0.0, LENGTH_M, chemistry.cells + 1)
 
     def step(self, state, flux_m_s):
-        from adaptdg.transport import solve_adaptive_transport_step
+        from adaptdg.transport.one_d import solve_adaptive_transport_step
 
         result = solve_adaptive_transport_step(
             bulk_components_mol_m3=1000.0 * state.porosity[None, :] * state.concentrations_mol_l,

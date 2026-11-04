@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import pytest
 
-from adaptdg.transfer_2d import (
+from adaptdg.transfer.two_d import (
     clear_transfer_plan_cache,
     conservative_remap_plan_2d,
     refine_conservative_remap_plan_2d,
@@ -156,7 +156,7 @@ class ConservativeTransfer2DTests(unittest.TestCase):
 
     def test_refined_parent_map_matches_final_local_cell_order(self):
         pytest.importorskip("dolfinx")
-        from adaptdg.transport_2d import (
+        from adaptdg.transport.two_d import (
             create_rectangle_mesh_2d,
             mesh_triangles,
             refine_marked_triangles_with_parent,

@@ -2,7 +2,7 @@
 
 Extracted from ASRTM-PHREEQC (methods/onedim/adap1d.py): numerics,
 class and method names unchanged. Deviations: the relative import of the operator points to
-``adaptdg.rm_1d``, ``Adap1DRun._marking`` calls ``adaptdg.marking.dorfler_union_1d_adap`` (the
+``adaptdg.transport.rm_1d``, ``Adap1DRun._marking`` calls ``adaptdg.marking.dorfler_union_1d_adap`` (the
 exact adapter of the former body) and the duck-typed chemistry interface is documented by the
 ``Chemistry1D`` protocol (documentation only, never enforced).
 
@@ -33,7 +33,7 @@ from typing import Mapping, Protocol
 import numpy as np
 
 from adaptdg.marking import dorfler_union_1d_adap
-from adaptdg.rm_1d import RMOperator1D
+from adaptdg.transport.rm_1d import RMOperator1D
 
 
 class Chemistry1D(Protocol):

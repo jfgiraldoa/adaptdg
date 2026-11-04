@@ -27,7 +27,7 @@ stage 2a/2b (transport_bdf2.BDF2AdaptiveTransport, adap_fast).
 Provenance: copied from ASRTM-PHREEQC, methods/case4dev/adap_asfem.py. Numerics, public names and operation
 order unchanged; imports re-pointed to adaptdg (benchmark constants in ``adaptdg.case4.constants``,
 ``dorfler_mark_1d`` / ``gradient_jump_indicator_1d`` / ``conservative_positive_projection_1d`` from
-``adaptdg.marking`` / ``adaptdg.transport``).
+``adaptdg.marking`` / ``adaptdg.transport.one_d``).
 ``dorfler_with_ties`` is imported from ``adaptdg.marking`` (verbatim identical body).
 No chemistry import: the chemistry object only needs ``cells``, ``components`` and ``inlet``.
 """

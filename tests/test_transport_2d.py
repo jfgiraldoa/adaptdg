@@ -18,7 +18,7 @@ def test_import_adaptdg_does_not_load_dolfinx():
 
 def test_transport_2d_modules_import_without_dolfinx():
     code = (
-        "import sys, adaptdg.transport_2d, adaptdg.transport_dg2d, adaptdg.rm_transport, adaptdg.flow;"
+        "import sys, adaptdg.transport.two_d, adaptdg.transport.dg_2d, adaptdg.transport.rm_2d, adaptdg.flow;"
         "sys.exit(int('dolfinx' in sys.modules))"
     )
     assert subprocess.run([sys.executable, "-c", code], check=False).returncode == 0
@@ -26,7 +26,7 @@ def test_transport_2d_modules_import_without_dolfinx():
 
 def test_refine_marked_triangles_with_parent_counts():
     pytest.importorskip("dolfinx")
-    from adaptdg.transport_2d import (
+    from adaptdg.transport.two_d import (
         create_rectangle_mesh_2d,
         mesh_triangles,
         refine_marked_triangles_with_parent,
@@ -62,7 +62,7 @@ def _momas_setup():
 
 def test_conservative_dg2d_balance_and_positivity():
     pytest.importorskip("dolfinx")
-    from adaptdg.transport_dg2d import ConservativeDG2D
+    from adaptdg.transport.dg_2d import ConservativeDG2D
 
     flow, sol, dom, phi, dg0 = _momas_setup()
     g = ConservativeDG2D(
@@ -79,7 +79,7 @@ def test_conservative_dg2d_balance_and_positivity():
 
 def test_rm_transport_momas_runs_and_is_nonnegative_ish():
     pytest.importorskip("dolfinx")
-    from adaptdg.rm_transport import RMTransportMoMaS2D
+    from adaptdg.transport.rm_2d import RMTransportMoMaS2D
 
     flow, sol, dom, phi, dg0 = _momas_setup()
     r = RMTransportMoMaS2D(

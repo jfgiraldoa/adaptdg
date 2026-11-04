@@ -2,14 +2,14 @@
 
 Extracted from ASRTM-PHREEQC (``methods/front2d/f2a.py``). There the three changes below were
 applied to the repository functions as source-text replacements at run time; here they are
-native options of :func:`adaptdg.loop.run_adaptive_loop_2d` (``history_policy="f2a"``), with
+native options of :func:`adaptdg.loops.two_d.run_adaptive_loop_2d` (``history_policy="f2a"``), with
 the same operations in the same order. Without F2A, the DG1 transport history of the
 persistent core/halo mesh is lost in two places:
 
 P1 (predictive-mesh rebuild, every ``mesh_rebuild_interval`` steps): the solver receives no
    history and rebuilds it from chemistry-grid cell averages (DG0 at chemistry resolution).
    With F2A the current and older DG1 histories are projected exactly (L2, DG1 to DG1,
-   conservative per new triangle; ``adaptdg.history_projection``) from the old persistent
+   conservative per new triangle; ``adaptdg.transfer.history_projection``) from the old persistent
    mesh to the rebuilt mesh, then nonnegative-scaled (Zhang-Shu, mean kept).
 P2 (in-step refinement): the complete history is discarded and the children get
    chemistry-grid averages. With F2A the children receive the exact restriction of their
@@ -20,7 +20,7 @@ P3 (restart): a run resumed exactly at a rebuild step also rebuilds its last com
 
 ``F2AOptions`` switches each change on or off. ``F2AHistory`` holds the per-run state
 (statistics and a one-entry cache of the DG1 dof-coordinate vertices). With ``optimised=True``
-(used together with the fast path, ``adaptdg.fastadap``) identical triangles are copied
+(used together with the fast path, ``adaptdg.loops.fastadap``) identical triangles are copied
 instead of projected and the restriction weights are computed once per refinement; results
 agree with the plain path to round-off.
 """
@@ -33,7 +33,7 @@ from typing import Mapping, Sequence
 
 import numpy as np
 
-from adaptdg.history_projection import (
+from adaptdg.transfer.history_projection import (
     build_plan,
     canonical_vertices,
     dof_triangles,
@@ -136,7 +136,7 @@ class F2AHistory:
             [current[n] for n in names] + ([older[n] for n in names] if have_older else [])
         )
         if self.optimised:
-            from adaptdg.history_projection_fast import project_stack
+            from adaptdg.transfer.history_projection_fast import project_stack
 
             projected, new_areas, coverage_error, n_identical = project_stack(
                 old_tri, new_tri, stack

@@ -21,10 +21,10 @@ def test_stubs_raise():
     with pytest.raises(NotImplementedError):
         adaptdg.register_field("c", "dg1")
     calls = {
-        "transport": ("transport_step", (None, None, 1.0)),
+        "transport.one_d": ("transport_step", (None, None, 1.0)),
         "estimators": ("cell_indicators", (None, None)),
-        "mesh": ("adapt_mesh", (None, None)),
-        "transfer": ("transfer_field", (None, None, None)),
+        "loops.mesh_policy": ("adapt_mesh", (None, None)),
+        "transfer.one_d": ("transfer_field", (None, None, None)),
     }
     for mod, (fn, args) in calls.items():
         m = importlib.import_module(f"adaptdg.{mod}")

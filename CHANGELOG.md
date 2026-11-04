@@ -5,6 +5,11 @@ versioning: Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+- Modules moved into subpackages, without changes to the numerics: `adaptdg.transport` (`one_d`, `two_d`, `dg_2d`, `rm_1d`, `rm_2d`),
+  `adaptdg.transfer` (`one_d`, `two_d`, `f2a`, `history_projection`, `history_projection_fast`), `adaptdg.loops` (`one_d`, `two_d`, `fastadap`,
+  `mesh_policy`) and `adaptdg.momas` (`loop`, `coupled`). The old paths `adaptdg.loop`, `adaptdg.loop_1d`, `adaptdg.mesh` and the others are gone.
+
 ### Added
 - `examples/vms/burgers_isotropic`: `p = 4` in `--full` (150000 DoF cap; paper Fig. 15): `L2`/`Vh` slopes -5.3/-4.5. The `L2` plateau of `theta` at `p = 3, 4`
   was checked on a frozen mesh (quadrature, Newton tolerances) and is a mesh-resolution effect, not an error-measurement artifact (README).
@@ -28,8 +33,8 @@ versioning: Semantic Versioning.
   `examples/vms/burgers_single` (shock at `x = 1/2`, both presets). Linear cases are unchanged.
 - History-preserving mesh rebuild (F2A) and fast path of the 2D adaptive loop: `run_adaptive_loop_2d(...,
   history_policy="f2a", fast=True)` keeps the DG1 reaction history across predictive-mesh rebuilds and in-step
-  refinements (new modules `adaptdg.f2a`, `adaptdg.history_projection`, `adaptdg.history_projection_fast`,
-  `adaptdg.fastadap`; `adaptdg.transfer_2d.use_plan_builder`). Defaults are unchanged; `AdaptiveRun2D.statistics`
+  refinements (new modules `adaptdg.transfer.f2a`, `adaptdg.transfer.history_projection`, `adaptdg.transfer.history_projection_fast`,
+  `adaptdg.loops.fastadap`; `adaptdg.transfer.two_d.use_plan_builder`). Defaults are unchanged; `AdaptiveRun2D.statistics`
   reports the counters.
 - `adaptdg.vms.galerkin`: standard CG(p) Galerkin baseline (`solve_galerkin`, `galerkin_errors`) with the same problems, meshes
   and error targets; `LoopSettings.method` (`"rm"` | `"galerkin"`) and `compare_galerkin`; the problem `PoissonSine` and the
@@ -52,12 +57,12 @@ versioning: Semantic Versioning.
   switched on by the `reconstruct` key of `numerics.json`.
 - `Heterogeneous` and `Anisotropic` cases and the examples `examples/vms/reentrant_corner`, `heterogeneous` and
   `anisotropic`.
-- 1D transport (`adaptdg.transport`, `adaptdg.rm_1d`) and 2D transport (`adaptdg.transport_2d`,
-  `adaptdg.transport_dg2d`, `adaptdg.rm_transport`) with the Darcy RT0-DG0 solver in `adaptdg.flow`.
-- Conservative mesh transfer in 1D and 2D (`adaptdg.transfer`, `adaptdg.transfer_2d`).
+- 1D transport (`adaptdg.transport.one_d`, `adaptdg.transport.rm_1d`) and 2D transport (`adaptdg.transport.two_d`,
+  `adaptdg.transport.dg_2d`, `adaptdg.transport.rm_2d`) with the Darcy RT0-DG0 solver in `adaptdg.flow`.
+- Conservative mesh transfer in 1D and 2D (`adaptdg.transfer.one_d`, `adaptdg.transfer.two_d`).
 - Dörfler marking (`adaptdg.marking`): a common core and adapters for the 1D, 2D, MoMaS and 1D-loop variants.
-- Adaptive loops that take the chemistry through callbacks or protocols: `adaptdg.loop` (2D), `adaptdg.loop_1d`,
-  `adaptdg.loop_momas` and `adaptdg.coupled_momas`; persistent-mesh policy in `adaptdg.mesh`.
+- Adaptive loops that take the chemistry through callbacks or protocols: `adaptdg.loops.two_d` (2D), `adaptdg.loops.one_d`,
+  `adaptdg.momas.loop` and `adaptdg.momas.coupled`; persistent-mesh policy in `adaptdg.loops.mesh_policy`.
 - `adaptdg.case4`: Case 4 (evolving porosity) transport and adaptive modules, with no chemistry import.
 - `CITATION.cff`, project URLs and keywords in `pyproject.toml`.
 

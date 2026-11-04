@@ -22,7 +22,7 @@ _PLAN_CACHE: OrderedDict[tuple[object, ...], "ConservativeRemapPlan2D"] = (
 _PLAN_CACHE_BYTES = 0
 _PLAN_CACHE_HITS = 0
 _PLAN_CACHE_MISSES = 0
-# Optional plan builder (``adaptdg.fastadap``), selected with :func:`use_plan_builder`; None: ``create``.
+# Optional plan builder (``adaptdg.loops.fastadap``), selected with :func:`use_plan_builder`; None: ``create``.
 _PLAN_BUILDER = None
 
 

@@ -14,12 +14,12 @@ problems, and time-dependent transport runs with adaptive meshes in 1D and 2D.
 
 ## What is inside
 
-- `adaptdg.vms`: stationary adaptive solver (2D/3D, any polynomial degree) and VMS reconstruction.
-- 1D and 2D transient transport with adaptive meshes.
-- Conservative mesh-to-mesh transfer of the history fields.
-- Dörfler marking.
-- Adaptive loops that take the chemistry through callbacks.
-- Case 4 transport (evolving porosity).
+- `adaptdg.vms`: stationary and unsteady adaptive solver (2D/3D, any polynomial degree) and VMS reconstruction.
+- `adaptdg.transport`: 1D and 2D transient transport operators.
+- `adaptdg.transfer`: conservative mesh-to-mesh transfer of the history fields.
+- `adaptdg.loops`: adaptive loops that take the chemistry through callbacks.
+- `adaptdg.marking`: Dörfler marking. `adaptdg.flow`: Darcy RT0-DG0 solver.
+- `adaptdg.case4` and `adaptdg.momas`: drivers of two benchmarks (evolving porosity, MoMaS 2D).
 
 ## Examples
 

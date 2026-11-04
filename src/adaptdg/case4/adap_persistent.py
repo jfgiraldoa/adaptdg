@@ -24,7 +24,7 @@ one chemistry cell.
 Provenance: copied from ASRTM-PHREEQC, methods/case4dev/adap_persistent.py. Numerics, public names and operation
 order unchanged; imports re-pointed to adaptdg (benchmark constants in ``adaptdg.case4.constants``,
 ``dorfler_mark_1d`` / ``gradient_jump_indicator_1d`` / ``conservative_positive_projection_1d`` from
-``adaptdg.marking`` / ``adaptdg.transport``).
+``adaptdg.marking`` / ``adaptdg.transport.one_d``).
 No chemistry import: the chemistry object only needs ``cells``, ``components`` and ``inlet``.
 """
 
@@ -286,7 +286,7 @@ class PersistentAdaptiveTransport:
     # -- one transport substep ----------------------------------------------
     def step(self, state, flux_m_s):
         from adaptdg.marking import dorfler_mark_1d
-        from adaptdg.transport import (
+        from adaptdg.transport.one_d import (
             conservative_positive_projection_1d, gradient_jump_indicator_1d)
 
         conc = np.asarray(state.concentrations_mol_l, dtype=float)

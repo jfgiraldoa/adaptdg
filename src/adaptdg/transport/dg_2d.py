@@ -188,7 +188,7 @@ class ConservativeDG2D:
 
         from dolfinx import fem
         from dolfinx.fem import petsc
-        from adaptdg.transport import nonnegative_means
+        from adaptdg.transport.one_d import nonnegative_means
 
         ncomp = self.state.shape[0]
         inlet = np.zeros(ncomp) if inlet is None else np.asarray(inlet, dtype=float)

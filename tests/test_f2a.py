@@ -7,12 +7,12 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from adaptdg.f2a import F2AHistory, F2AOptions, restrict_to_children
-from adaptdg.history_projection import build_plan, canonical_vertices, scale_nonnegative
-from adaptdg.history_projection_fast import build_plan as build_plan_fast
-from adaptdg.history_projection_fast import project_stack
-from adaptdg.loop import ChemistryCallbacks2D, LoopSettings2D, run_adaptive_loop_2d
-from adaptdg.mesh import ReactiveTransportPolicy2D
+from adaptdg.transfer.f2a import F2AHistory, F2AOptions, restrict_to_children
+from adaptdg.transfer.history_projection import build_plan, canonical_vertices, scale_nonnegative
+from adaptdg.transfer.history_projection_fast import build_plan as build_plan_fast
+from adaptdg.transfer.history_projection_fast import project_stack
+from adaptdg.loops.two_d import ChemistryCallbacks2D, LoopSettings2D, run_adaptive_loop_2d
+from adaptdg.loops.mesh_policy import ReactiveTransportPolicy2D
 
 COMPONENTS = ("a", "b")
 SHAPE = (6, 6)
@@ -51,8 +51,8 @@ def discontinuous_dg1(canonical, seed=0):
 
 def test_import_keeps_dolfinx_lazy():
     code = (
-        "import sys, adaptdg.f2a, adaptdg.fastadap, adaptdg.history_projection,"
-        "adaptdg.history_projection_fast, adaptdg.loop;"
+        "import sys, adaptdg.transfer.f2a, adaptdg.loops.fastadap, adaptdg.transfer.history_projection,"
+        "adaptdg.transfer.history_projection_fast, adaptdg.loops.two_d;"
         "assert 'dolfinx' not in sys.modules and 'asrtm_phreeqc' not in sys.modules"
     )
     subprocess.run([sys.executable, "-c", code], check=True)
@@ -119,7 +119,7 @@ def test_nonnegative_scaling_keeps_the_mean():
 
 def test_f2a_history_projection_and_restriction_on_dolfinx_meshes():
     pytest.importorskip("dolfinx")
-    from adaptdg.transport_2d import create_rectangle_mesh_2d, refine_marked_triangles_with_parent
+    from adaptdg.transport.two_d import create_rectangle_mesh_2d, refine_marked_triangles_with_parent
 
     coarse = create_rectangle_mesh_2d(lower=(0.0, 0.0), upper=(1.0, 1.0), cells=(3, 3))
     other = create_rectangle_mesh_2d(lower=(0.0, 0.0), upper=(1.0, 1.0), cells=(4, 4))

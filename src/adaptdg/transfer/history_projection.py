@@ -2,7 +2,7 @@
 
 Extracted from ASRTM-PHREEQC (methods/front2d/history_projection.py); numerics unchanged.
 
-Used by the history-preserving mesh rebuild (F2A, ``adaptdg.f2a``) to keep the complete
+Used by the history-preserving mesh rebuild (F2A, ``adaptdg.transfer.f2a``) to keep the complete
 DG1 transport history when the 2D ADAP mesh is rebuilt or refined, instead of resetting
 it to chemistry-grid cell averages. For every new triangle T and every old triangle K overlapping it,
 the convex polygon T ∩ K is computed (Sutherland–Hodgman); the product of the

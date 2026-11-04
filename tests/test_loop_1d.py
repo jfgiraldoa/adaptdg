@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from adaptdg.loop_1d import (
+from adaptdg.loops.one_d import (
     Adap1DRun,
     Adap1DSettings,
     cells_to_dg1,
@@ -15,7 +15,7 @@ from adaptdg.loop_1d import (
     positivity_fix,
     positivity_mixing,
 )
-from adaptdg.rm_1d import RMOperator1D
+from adaptdg.transport.rm_1d import RMOperator1D
 
 COMPONENTS = ("a", "b")
 L, N, DT, D, V = 1.0, 20, 0.05, 1e-4, 1.0
@@ -44,7 +44,7 @@ def _run(settings, chemistry=None, cells=N):
 
 def test_import_is_light():
     code = (
-        "import sys, adaptdg.loop_1d, adaptdg.rm_1d;"
+        "import sys, adaptdg.loops.one_d, adaptdg.transport.rm_1d;"
         "assert not {'dolfinx', 'asrtm_dg', 'asrtm_phreeqc', 'phreeqcrm'} & set(sys.modules)"
     )
     subprocess.run([sys.executable, "-c", code], check=True)

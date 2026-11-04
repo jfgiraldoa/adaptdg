@@ -12,7 +12,7 @@ import unittest
 import numpy as np
 import pytest
 
-from adaptdg.transport import (
+from adaptdg.transport.one_d import (
     PorosityTransportSettings,
     conservative_positive_projection_1d,
     dorfler_mark_1d,
@@ -97,7 +97,7 @@ def test_nonnegative_means_keeps_weighted_inventory():
 
 def test_import_adaptdg_does_not_load_dolfinx():
     code = (
-        "import sys, adaptdg, adaptdg.transport; "
+        "import sys, adaptdg, adaptdg.transport.one_d; "
         "assert not any(m.split('.')[0] in ('dolfinx', 'ufl', 'basix', 'petsc4py', 'mpi4py') "
         "for m in sys.modules)"
     )
@@ -114,7 +114,7 @@ def _interval(n):
 
 def test_conservative_dg1_inventory_balance():
     domain = _interval(20)
-    from adaptdg.transport import ConservativeDG1D
+    from adaptdg.transport.one_d import ConservativeDG1D
 
     cells = 20
     solver = ConservativeDG1D(
@@ -135,7 +135,7 @@ def test_conservative_dg1_inventory_balance():
 
 def test_adaptive_transport_step_runs_and_balances():
     pytest.importorskip("dolfinx")
-    from adaptdg.transport import solve_adaptive_transport_step
+    from adaptdg.transport.one_d import solve_adaptive_transport_step
 
     n = 16
     edges = np.linspace(0.0, 1.0, n + 1)
