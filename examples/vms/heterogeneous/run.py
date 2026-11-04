@@ -37,8 +37,8 @@ def main(full: bool = False, degrees=None, dofmax=None) -> None:
         )
         last = out["history"][-1]
         s = {k: round(v, 2) for k, v in out["slopes"].items() if k != "E"}
-        print(f"  ndofs={last['ndofs']} L2 ubar/u/phi={last['L2']:.2e}/{last['L2_u']:.2e}/"
-              f"{last['L2_phi']:.2e} Vh={last['Vh']:.2e}/{last['Vh_u']:.2e}/{last['Vh_phi']:.2e}\n"
+        print(f"  ndofs={last['ndofs']} L2 ubar/u/phi={last['L2_proj']:.2e}/{last['L2_u_proj']:.2e}/"
+              f"{last['L2_phi_proj']:.2e} Vh={last['Vh_proj']:.2e}/{last['Vh_u_proj']:.2e}/{last['Vh_phi_proj']:.2e}\n"
               f"  slopes vs DoF^(1/2): {s}", flush=True)
     print(f"done in {time.time() - t0:.0f}s; now run: python plot.py")
 

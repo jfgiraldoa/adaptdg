@@ -26,14 +26,14 @@ def main() -> None:
             h = read(f)
             p, mode = f.stem.split("_")[1:3]
             x = np.sqrt(h["ndofs"])
-            ax.loglog(x, h[key], "o-" if mode == "adaptive" else "x--", ms=3, label=f"{p} {mode}")
+            ax.loglog(x, h[key + "_proj"], "o-" if mode == "adaptive" else "x--", ms=3, label=f"{p} {mode}")
             if mode == "adaptive":  # reference slope -p (Vh) or -(p+1) (L2), below the curve
                 slope = int(p[1:]) + (key == "L2")
                 xr = np.array([x[-1] / 2, x[-1]])
-                ax.loglog(xr, h[key][-1] / 3 * (xr / x[-1]) ** -slope, "k:", lw=0.8)
-                ax.text(xr[0], h[key][-1] / 3 * 2**slope, f"-{slope}", fontsize=7)
+                ax.loglog(xr, h[key + "_proj"][-1] / 3 * (xr / x[-1]) ** -slope, "k:", lw=0.8)
+                ax.text(xr[0], h[key + "_proj"][-1] / 3 * 2**slope, f"-{slope}", fontsize=7)
         ax.set_xlabel("DoF$^{1/2}$")
-        ax.set_ylabel("L2 error" if key == "L2" else "Vh error")
+        ax.set_ylabel(f"{key} error against the DG(p) projection")
         ax.legend(fontsize=7)
     fig.tight_layout()
     fig.savefig(OUT / "errors.png", dpi=150)

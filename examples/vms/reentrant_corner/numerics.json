@@ -1,4 +1,5 @@
 {
+  "preset": "legacy",
   "p": 1,
   "theta_ref": 0.25,
   "tolref": 0.2,

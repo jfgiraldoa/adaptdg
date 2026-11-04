@@ -45,7 +45,7 @@ def summarise(history: list[dict]) -> dict:
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--full", action="store_true", help="p = 1, 2, 3 up to 1e5 DoF")
-    ap.add_argument("--preset", choices=("paper", "legacy"), default="paper")
+    ap.add_argument("--preset", choices=("legacy", "paper"), default="legacy")
     ap.add_argument("--degrees", type=int, nargs="+", help="polynomial degrees (default: numerics.json)")
     ap.add_argument("--dofmax", type=int, help="override the DoF cap of every run")
     args = ap.parse_args(argv)
@@ -83,7 +83,7 @@ def main(argv: list[str] | None = None) -> None:
                         "time_s": round(elapsed, 1), "peak_rss_mb": round(peak_rss_mb()), "slope_span": SLOPE_SPAN,
                         "slopes": {k: round(v, 3) for k, v in slopes.items()},
                         "ratios_last_mesh": {k: round(v, 3) for k, v in ratios.items()}, "last_row": last})
-        print(f"  ndofs={last['ndofs']} levels={len(history)} L2={last['L2']:.2e} Vh={last['Vh']:.2e} "
+        print(f"  ndofs={last['ndofs']} levels={len(history)} L2={last['L2_proj']:.2e} Vh={last['Vh_proj']:.2e} "
               f"time={elapsed:.0f}s peak={peak_rss_mb():.0f}MB", flush=True)
         print("  slopes vs DoF^(1/2), last 2x window: "
               + " ".join(f"{k}={v:.2f}" for k, v in summary[-1]["slopes"].items()

@@ -80,7 +80,7 @@ def run_one(pspec: dict, nspec: dict, out: Path, tag: str, progress=None) -> dic
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--full", action="store_true", help="p = 1, 2, 3, t_final = 0.1 and the caps of numerics.json")
-    ap.add_argument("--preset", choices=("paper", "legacy"), default="paper")
+    ap.add_argument("--preset", choices=("legacy", "paper"), default="legacy")
     ap.add_argument("--integrator", choices=("be", "bdf2", "both"), default="both")
     ap.add_argument("--degrees", type=int, nargs="+", help="polynomial degrees (default: numerics.json)")
     ap.add_argument("--kappa", type=float, help="diffusivity (default: problem.json)")
@@ -126,7 +126,7 @@ def main(argv: list[str] | None = None) -> None:
         e = summary[-1]
         last = e["last_row"]
         print(f"  steps={e['steps']} ndofs={e['ndofs_min']}-{e['ndofs_max']} solves={e['total_solves']} E={e['E']:.2e} "
-              f"L2={last['L2']:.2e} L2_proj={last.get('L2_proj', float('nan')):.2e} Vh={last['Vh']:.2e} time={e['time_s']:.0f}s "
+              f"L2_proj={last.get('L2_proj', float('nan')):.2e} L2_exact={last['L2']:.2e} Vh_proj={last.get('Vh_proj', float('nan')):.2e} time={e['time_s']:.0f}s "
               f"peak={e['peak_rss_mb']:.0f}MB", flush=True)
         (out / "summary.json").write_text(json.dumps(summary, indent=1))
     print(f"done in {time.time() - t0:.0f}s; now run: python plot.py")

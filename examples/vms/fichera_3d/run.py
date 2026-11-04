@@ -83,7 +83,7 @@ def summarise(history: list[dict]) -> dict:
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--full", action="store_true", help="q in {0.1, 1/3} x p in {1, 2} x {adaptive, uniform}")
-    ap.add_argument("--preset", choices=("paper", "legacy"), default="paper")
+    ap.add_argument("--preset", choices=("legacy", "paper"), default="legacy")
     ap.add_argument("--degrees", type=int, nargs="+", help="polynomial degrees (default 1; 1 2 with --full)")
     ap.add_argument("--dofmax", type=int, help="override the DoF cap of every run")
     args = ap.parse_args(argv)
@@ -120,8 +120,8 @@ def main(argv: list[str] | None = None) -> None:
                         "peak_rss_mb": round(peak_rss_mb()), "slope_span": SLOPE_SPAN,
                         "slopes": {k: round(v, 3) for k, v in slopes.items()}, "clustering": clustering(r, h),
                         "last_row": last})
-        print(f"  ndofs={last['ndofs']} levels={len(history)} E={last['E']:.2e} L2={last['L2']:.2e} "
-              f"Vh={last['Vh']:.2e} time={elapsed:.0f}s peak={peak_rss_mb():.0f}MB", flush=True)
+        print(f"  ndofs={last['ndofs']} levels={len(history)} E={last['E']:.2e} L2={last['L2_proj']:.2e} "
+              f"Vh={last['Vh_proj']:.2e} time={elapsed:.0f}s peak={peak_rss_mb():.0f}MB", flush=True)
         print("  slopes vs DoF^(1/3), last 2x window: "
               + " ".join(f"{k}={v:.2f}" for k, v in summary[-1]["slopes"].items() if k in ("L2", "Vh", "Vh_proj", "L2_proj")),
               flush=True)

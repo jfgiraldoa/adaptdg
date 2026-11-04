@@ -83,11 +83,16 @@ Eriksson-Johnson problem (2D and 3D) and both Burgers equations and the unsteady
 
 ## Relation to the VMS paper
 
-adaptdg is an updated implementation of the method of Giraldo & Calo (2023), and the paper is its reference. It is not
-an exact reproduction of the published results: the platform, solvers and mesh refinement differ, so meshes and errors
-differ level by level. Compared with the published figures, the known differences are in what is measured. The `phi`
-improvement over `theta` in the Vh norm appears only against the DG(p) projection of the exact solution, and the Vh
-errors of the anisotropic case are lower than those published, while its L2 errors agree. See `docs/VMS.md`.
+adaptdg is an updated implementation of the method of Giraldo & Calo (2023), and the paper is its reference.
+
+- **To reproduce the paper**, run the cases in `examples/vms`. They use the `legacy` preset and report errors against the
+  DG(p) projection of the exact solution, the choices of the original code behind the published figures. Platform, solvers
+  and mesh refinement differ, so the numbers are close to the published ones without being identical.
+- **For your own work**, the library defaults are unchanged: the `paper` preset, which follows the equations as printed, and
+  the columns `L2`, `Vh` against the exact solution (`L2_proj`, `Vh_proj` against the projection).
+
+Against the exact solution, the improvement of `phi` over `theta` in the Vh norm does not appear, and the Vh errors of the
+anisotropic case are several times lower than those published. See `docs/VMS.md`.
 
 ## How to cite
 

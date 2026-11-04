@@ -249,8 +249,9 @@ DoF^(-(p+1)/2) for p = 1..4, while uniform refinement stalls at DoF^(-1/3).
 
 ## Legacy and paper presets
 
-`numerics.json` key `"preset": "paper" | "legacy"` (default `"paper"`, the behaviour of all releases so far).
-`paper` follows the method as published, in this updated implementation; `legacy` follows the choices of the original implementation. Neither is an exact reproduction of the published numbers. Every row is one field of
+`numerics.json` key `"preset": "paper" | "legacy"`. The library default is `"paper"`, which follows the equations as printed; the cases in
+`examples/vms` use `"legacy"`, which follows the original implementation, the code behind the published figures. Neither gives identical
+numbers, because platform, solvers and mesh refinement differ. Every row is one field of
 `adaptdg.vms.preset.Preset`, so mixed variants are possible (`"preset_overrides": {"gram_l2": true}`).
 Legacy references are file:line in the `asfem-legacy` tag.
 
@@ -270,9 +271,10 @@ Legacy references are file:line in the `asfem-legacy` tag.
 
 * `beta = (1, 0)` is used in the heterogeneous case because the exact solution needs it; the paper prints `(0, 1)`.
 * The Gram form uses the energy form `kappa |grad w|^2` in eq. (14), as the legacy code did.
-* In the Vh norm the reconstruction `phi` is 1.1-1.26 times worse than `theta` against the exact solution, and
-  better only against the DG(p) L2 projection of the exact solution (the target of the legacy postprocessing);
-  see "Error targets" and "Legacy and paper presets".
+* The published figures measure errors against the DG(p) L2 projection of the exact solution, the target of the legacy
+  postprocessing. Against the exact solution, `phi` is 1.1-1.26 times worse than `theta` in the Vh norm, and the Vh errors of
+  the anisotropic case are 3.8-10 times lower than those published (median factor, Figs. 7 and 8). With the `legacy` preset and
+  the projection target that factor is 1.06 and 1.13. See "Error targets" and "Legacy and paper presets".
 
 ## Running every example
 

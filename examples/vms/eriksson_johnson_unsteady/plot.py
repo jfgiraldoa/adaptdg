@@ -13,7 +13,7 @@ import matplotlib.tri as mtri  # noqa: E402
 import numpy as np  # noqa: E402
 
 OUT = Path(__file__).parent / "out"
-TARGETS = (("", "exact solution"), ("_proj", "DG(p) L2 projection"))
+TARGETS = (("_proj", "DG(p) L2 projection"), ("", "exact solution"))
 STYLE = {"be": ("C0", "BE"), "bdf2": ("C3", "BDF2")}
 
 

@@ -10,6 +10,10 @@ versioning: Semantic Versioning.
 ### Added
 - Zenodo DOI in `README.md` and `CITATION.cff`.
 
+### Changed
+- `examples/vms`: the cases use the `legacy` preset by default and lead with the errors against the DG(p) projection, which match the
+  published figures. The library defaults (`paper` preset, columns `L2`, `Vh` against the exact solution) are unchanged.
+
 ### Removed
 - Unimplemented stubs: `adaptdg.AdaptiveTransport`, `adaptdg.register_field`, `transport_step`, `transfer_field`, `adapt_mesh`, `cell_indicators`,
   the modules `adaptdg.fields` and `adaptdg.estimators`, and the two skipped placeholder tests of `tests/test_conservation_contract.py`.

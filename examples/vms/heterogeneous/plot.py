@@ -33,15 +33,15 @@ def main() -> None:
                 h = read(f)
                 x = np.sqrt(h["ndofs"])
                 for suffix, (label, style) in QUANTITIES.items():
-                    ax.loglog(x, h[norm + suffix], style, color=color, ms=3, lw=0.9,
+                    ax.loglog(x, h[norm + suffix + "_proj"], style, color=color, ms=3, lw=0.9,
                               label=f"p={p} {label}" if p == 1 else None)
                 slope = p + (norm == "L2")  # reference slope -p (Vh) or -(p+1) (L2)
                 xr = np.array([x[-1] / 2, x[-1]])
-                ax.loglog(xr, h[norm][-1] / 3 * (xr / x[-1]) ** -slope, "k:", lw=0.8)
-                ax.text(xr[0], h[norm][-1] / 3 * 2**slope, f"-{slope}", fontsize=7)
+                ax.loglog(xr, h[norm + "_proj"][-1] / 3 * (xr / x[-1]) ** -slope, "k:", lw=0.8)
+                ax.text(xr[0], h[norm + "_proj"][-1] / 3 * 2**slope, f"-{slope}", fontsize=7)
             ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
             ax.set_xlabel("DoF$^{1/2}$")
-            ax.set_ylabel(f"{norm} error")
+            ax.set_ylabel(f"{norm} error against the DG(p) projection")
             ax.legend(fontsize=6)
         fig.suptitle(f"heterogeneous diffusion, {mode} refinement")
         fig.tight_layout()

@@ -13,7 +13,7 @@ import numpy as np  # noqa: E402
 
 OUT = Path(__file__).parent / "out"
 COLORS = {1: "C0", 2: "C1", 3: "C2"}
-TARGETS = (("", "exact solution"), ("_proj", "DG(p) L2 projection"))
+TARGETS = (("_proj", "DG(p) L2 projection"), ("", "exact solution"))
 
 
 def read(path: Path) -> dict[str, np.ndarray]:

@@ -10,7 +10,7 @@
   "quadrature_degree": 12,
   "refinement": "adaptive",
   "reconstruct": true,
-  "preset": "paper",
+  "preset": "legacy",
   "error_targets": "both",
   "example": {
     "dofmax_full": {"1": 150000, "2": 100000, "3": 100000},

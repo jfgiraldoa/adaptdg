@@ -35,8 +35,8 @@ def main(full: bool = False, degrees=None, dofmax=None) -> None:
         )
         last = out["history"][-1]
         slopes = {k: round(v, 2) for k, v in out["slopes"].items()}
-        print(f"  ndofs={last['ndofs']} E={last['E']:.2e} L2={last['L2']:.2e} "
-              f"Vh={last['Vh']:.2e} slopes vs DoF^(1/2): {slopes}", flush=True)
+        print(f"  ndofs={last['ndofs']} E={last['E']:.2e} L2={last['L2_proj']:.2e} "
+              f"Vh={last['Vh_proj']:.2e} slopes vs DoF^(1/2): {slopes}", flush=True)
     print(f"done in {time.time() - t0:.0f}s; now run: python plot.py")
 
 

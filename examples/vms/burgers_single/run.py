@@ -56,7 +56,7 @@ def newton_summary(history: list[dict]) -> dict:
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--full", action="store_true", help="kappa in {1e-2, 1e-3, 1e-4}, larger DoF cap")
-    ap.add_argument("--preset", choices=("paper", "legacy"), default="paper")
+    ap.add_argument("--preset", choices=("legacy", "paper"), default="legacy")
     ap.add_argument("--degrees", type=int, nargs="+", help="polynomial degrees (default: numerics.json)")
     ap.add_argument("--kappa", type=float, nargs="+", help="diffusivities (default: numerics.json)")
     ap.add_argument("--dofmax", type=int, help="override the DoF cap of every run")

@@ -9,7 +9,7 @@
   "quadrature_degree": 12,
   "refinement": "adaptive",
   "reconstruct": false,
-  "preset": "paper",
+  "preset": "legacy",
   "error_targets": "exact",
   "example": {
     "degrees": {"short": [3], "full": [3]},

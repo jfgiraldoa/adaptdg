@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 OUT = Path(__file__).parent / "out"
-TARGETS = (("", "exact solution"), ("_proj", "DG(p) L2 projection"))
+TARGETS = (("_proj", "DG(p) L2 projection"), ("", "exact solution"))
 CURVES = (("", "RM ubar", "C0", "o-"), ("_theta", "RM theta", "C2", "s-"), ("_phi", "RM phi", "C3", "^-"),
           ("_cg", "CG Galerkin", "k", "x--"))
 

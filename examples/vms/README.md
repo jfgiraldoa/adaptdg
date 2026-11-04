@@ -1,3 +1,12 @@
+# VMS examples: the cases of the paper
+
+These cases are set up to reproduce the published figures: they use the `legacy` preset (`--preset paper` where the example offers it
+selects the equations as printed) and their output and plots lead with the errors against the DG(p) projection of the exact solution
+(CSV columns `*_proj`). The columns without suffix are against the exact solution. Numbers quoted in the READMEs below were measured
+earlier and, unless they say otherwise, with the `paper` preset against the exact solution.
+
+The library defaults are not affected; see "Relation to the VMS paper" in the main README.
+
 # Running all VMS examples (batch runner)
 
 `run_all.py` runs every example of this folder with `--full`, for both presets where the example has one, in parallel,

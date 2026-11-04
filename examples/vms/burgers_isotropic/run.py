@@ -68,7 +68,7 @@ def summarise(history: list[dict]) -> dict:
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--full", action="store_true", help="p = 1, 2, 3 and larger DoF caps")
-    ap.add_argument("--preset", choices=("paper", "legacy"), default="paper")
+    ap.add_argument("--preset", choices=("legacy", "paper"), default="legacy")
     ap.add_argument("--degrees", type=int, nargs="+", help="polynomial degrees (default: numerics.json)")
     ap.add_argument("--kappa", type=float, help="diffusivity (default: problem.json)")
     ap.add_argument("--dofmax", type=int, help="override the DoF cap of every run")
@@ -111,7 +111,7 @@ def main(argv: list[str] | None = None) -> None:
                         "umax": max(r["umax"] for r in history[-5:]),
                         "clustering": layer_clustering(loop.domain, kappa), "last_row": last})
         nw = summary[-1]["newton"]
-        print(f"  ndofs={last['ndofs']} levels={len(history)} E={last['E']:.2e} L2={last['L2']:.2e} Vh={last['Vh']:.2e} "
+        print(f"  ndofs={last['ndofs']} levels={len(history)} E={last['E']:.2e} L2={last['L2_proj']:.2e} Vh={last['Vh_proj']:.2e} "
               f"newton {nw['converged']}/{nw['levels']} converged (iterations {nw['iterations_min']}-"
               f"{nw['iterations_max']}) time={elapsed:.0f}s peak={peak_rss_mb():.0f}MB", flush=True)
         print("  slopes vs DoF^(1/2), last 2x window: "
