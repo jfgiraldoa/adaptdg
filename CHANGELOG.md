@@ -5,6 +5,9 @@ versioning: Semantic Versioning.
 
 ## [Unreleased]
 
+### Added
+- Zenodo DOI in `README.md` and `CITATION.cff`.
+
 ## [0.1.0] - 2026-11-04
 
 First public release (alpha).

@@ -91,7 +91,7 @@ errors of the anisotropic case are lower than those published, while its L2 erro
 
 ## How to cite
 
-Cite the software through `CITATION.cff` (a DOI will be added with the first release) and the VMS
+Cite the software through `CITATION.cff` ([doi:10.5281/zenodo.23944243](https://doi.org/10.5281/zenodo.23944243), all versions) and the VMS
 paper (Giraldo & Calo 2023, CMAME, below).
 
 ## Previous work

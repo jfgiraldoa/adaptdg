@@ -9,7 +9,7 @@ authors:
 license: MIT
 repository-code: "https://github.com/jfgiraldoa/adaptdg"
 date-released: 2026-11-04
-# TODO: software doi (assigned by Zenodo when the v0.1.0 release is published)
+doi: "10.5281/zenodo.23944243"  # concept DOI, resolves to the latest version
 abstract: "Adaptive stabilised discontinuous-Galerkin / residual-minimisation transport and PDE solvers on FEniCSx. Updated implementation of the variational multiscale method of Giraldo and Calo (2023), which is its reference; not an exact reproduction of the published results."
 references:
   - type: article
