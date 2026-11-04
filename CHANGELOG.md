@@ -5,6 +5,9 @@ versioning: Semantic Versioning.
 
 ## [Unreleased]
 
+### Changed
+- `CITATION.cff`: longer abstract, with the DOI of the VMS paper.
+
 ## [0.1.1] - 2026-11-04
 
 ### Added

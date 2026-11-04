@@ -10,7 +10,16 @@ license: MIT
 repository-code: "https://github.com/jfgiraldoa/adaptdg"
 date-released: 2026-11-04
 doi: "10.5281/zenodo.23944243"  # concept DOI, resolves to the latest version
-abstract: "Adaptive stabilised discontinuous-Galerkin / residual-minimisation transport and PDE solvers on FEniCSx. Updated implementation of the variational multiscale method of Giraldo and Calo (2023), which is its reference; the examples follow the settings of the published figures."
+abstract: >-
+  adaptdg is a Python library for adaptive stabilised discontinuous-Galerkin (DG) transport and PDE solvers on FEniCSx
+  (DOLFINx 0.11). It discretises advection-diffusion-reaction problems with DG and minimises the residual in a dual DG
+  norm, which gives a stable solution and an error indicator that drives adaptive mesh refinement (Dörfler marking).
+  It includes a variational multiscale (VMS) reconstruction for stationary and unsteady problems (backward Euler and
+  BDF2) in 2D and 3D, with linear and nonlinear (Burgers) cases; 1D and 2D transient transport with conservative
+  mesh-to-mesh transfer; and drivers for two reactive-transport benchmarks, where the chemistry enters through callbacks
+  and adaptdg itself contains no chemistry. It is an updated implementation of the method of Giraldo and Calo (2023,
+  Computer Methods in Applied Mechanics and Engineering 417:116285, https://doi.org/10.1016/j.cma.2023.116285), which is
+  its reference; the examples in examples/vms follow the settings of the published figures. Successor of AS-FEM.
 references:
   - type: article
     title: "An Adaptive in Space, Stabilized Finite Element Method via Residual Minimization for Linear and Nonlinear Unsteady Advection-Diffusion-Reaction Equations"
