@@ -5,8 +5,14 @@ versioning: Semantic Versioning.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-04
+
 ### Added
 - Zenodo DOI in `README.md` and `CITATION.cff`.
+
+### Removed
+- Unimplemented stubs: `adaptdg.AdaptiveTransport`, `adaptdg.register_field`, `transport_step`, `transfer_field`, `adapt_mesh`, `cell_indicators`,
+  the modules `adaptdg.fields` and `adaptdg.estimators`, and the two skipped placeholder tests of `tests/test_conservation_contract.py`.
 
 ## [0.1.0] - 2026-11-04
 

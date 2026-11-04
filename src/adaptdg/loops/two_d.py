@@ -1,6 +1,6 @@
 """Adaptive loop (2D) with chemistry supplied by callbacks.
 
-Provenance: ``AdaptiveTransport`` is a skeleton stub. The rest is copied from ASRTM-PHREEQC
+Provenance: copied from ASRTM-PHREEQC
 (source: ASRTM-PHREEQC),
 ``src/asrtm_phreeqc/adaptive_calcite_dolomite_2d.py``: ``NegativeTransportCorrection2D``,
 ``AdaptiveRefinementSnapshot2D``, ``_prepare_chemistry_component_2d``,
@@ -30,7 +30,6 @@ from adaptdg.loops.fastadap import (
     fast_mesh_triangles,
     fast_refine_marked_triangles_with_parent,
 )
-from adaptdg.flow import FlowState
 from adaptdg.marking import dorfler_union_2d
 from adaptdg.loops.mesh_policy import (
     ReactiveTransportPolicy2D,
@@ -60,25 +59,6 @@ from adaptdg.transport.two_d import (
 )
 
 NEGATIVE_ROUNDOFF_TOLERANCE = 1.0e-10
-
-
-class AdaptiveTransport:
-    """Owns mesh adaptation and field transfer; the app owns time loop and sources."""
-
-    def __init__(self, mesh: Any, flow: FlowState | None = None, **options: Any) -> None:
-        raise NotImplementedError
-
-    def register_field(self, name: str, kind: str = "dg1", initial: Any | None = None) -> None:
-        """Register a field to be transferred whenever the mesh changes."""
-        raise NotImplementedError
-
-    def advance(self, flow: FlowState) -> None:
-        """Transport step plus estimate, mark, adapt and transfer."""
-        raise NotImplementedError
-
-    def water_volume(self) -> float:
-        """Integral of theta over the current mesh (conservation diagnostic)."""
-        raise NotImplementedError
 
 
 @dataclass(frozen=True)

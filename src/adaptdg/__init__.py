@@ -1,8 +1,6 @@
 """adaptdg: adaptive DG transport on FEniCSx. Alpha, interface not stable."""
 
-from adaptdg.fields import register_field
 from adaptdg.flow import FlowState
-from adaptdg.loops.two_d import AdaptiveTransport
 
-__version__ = "0.1.0"
-__all__ = ["AdaptiveTransport", "FlowState", "__version__", "register_field"]
+__version__ = "0.1.1"
+__all__ = ["FlowState", "__version__"]

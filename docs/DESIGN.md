@@ -59,9 +59,7 @@ new FEniCSx implementation of the AS-FEM / variational multiscale method of the 
   `react(inputs, time_step=dt)` returning an object with `concentrations`. A uniform 1D mesh
   without adaptivity is `Adap1DSettings(initial_cells=N, first_step_solves=1, step_solves=1,
   coarsen_tol=-1.0, positivity="mixing")`.
-- The residual-minimisation estimator of the transport solvers is embedded in their `step`, so
-  `adaptdg.estimators` is still a stub; the same holds for `AdaptiveTransport`, `adapt_mesh`,
-  `transport_step` and `transfer_field`.
-- Planned interface (not implemented): `FlowState(mesh, theta_old, theta_new, q)` and
-  `AdaptiveTransport`, which owns mesh adaptation (estimate, mark, refine/coarsen, transfer) while
-  the application owns the time loop and any chemistry or sources.
+- The residual-minimisation estimator of the transport solvers is embedded in their `step`.
+- Planned interface (not implemented): a single top-level class that owns mesh adaptation (estimate,
+  mark, refine/coarsen, transfer) while the application owns the time loop and any chemistry or sources.
+  `FlowState(mesh, theta_old, theta_new, q)` is the flow container for it.

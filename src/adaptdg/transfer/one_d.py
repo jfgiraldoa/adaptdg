@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -200,8 +199,3 @@ def cell_averages_to_p1_nodes(cell_averages: ArrayLike) -> NDArray[np.float64]:
     if values.size > 1:
         nodes[1:-1] = 0.5 * (values[:-1] + values[1:])
     return nodes
-
-
-def transfer_field(field: Any, old_mesh: Any, new_mesh: Any, kind: str = "dg1") -> Any:
-    """Transfer a field to a new mesh, preserving its integral (not yet implemented)."""
-    raise NotImplementedError

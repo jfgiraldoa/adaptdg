@@ -6,8 +6,7 @@ import adaptdg
 
 
 def test_public_names():
-    for name in ("FlowState", "AdaptiveTransport", "register_field"):
-        assert hasattr(adaptdg, name)
+    assert set(adaptdg.__all__) == {"FlowState", "__version__"}
 
 
 def test_flowstate_fields():
@@ -15,18 +14,7 @@ def test_flowstate_fields():
     assert fs.q is None
 
 
-def test_stubs_raise():
-    with pytest.raises(NotImplementedError):
-        adaptdg.AdaptiveTransport(None)
-    with pytest.raises(NotImplementedError):
-        adaptdg.register_field("c", "dg1")
-    calls = {
-        "transport.one_d": ("transport_step", (None, None, 1.0)),
-        "estimators": ("cell_indicators", (None, None)),
-        "loops.mesh_policy": ("adapt_mesh", (None, None)),
-        "transfer.one_d": ("transfer_field", (None, None, None)),
-    }
-    for mod, (fn, args) in calls.items():
-        m = importlib.import_module(f"adaptdg.{mod}")
-        with pytest.raises(NotImplementedError):
-            getattr(m, fn)(*args)
+@pytest.mark.parametrize("module", ["fields", "estimators"])
+def test_removed_stub_modules(module):
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module(f"adaptdg.{module}")

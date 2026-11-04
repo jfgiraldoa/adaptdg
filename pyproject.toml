@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adaptdg"
-version = "0.1.0"
+version = "0.1.1"
 description = "Adaptive stabilised DG / residual-minimisation transport and PDE solvers on FEniCSx (alpha)."
 keywords = ["discontinuous Galerkin", "residual minimization", "adaptive mesh refinement", "variational multiscale", "transport", "FEniCSx"]
 readme = "README.md"

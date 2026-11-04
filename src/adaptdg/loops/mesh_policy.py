@@ -1,6 +1,6 @@
 """Mesh refinement, persistent-mesh policy and predictive reactive mesh (2D).
 
-Provenance: ``adapt_mesh`` is a skeleton stub. The rest is copied from ASRTM-PHREEQC
+Provenance: copied from ASRTM-PHREEQC
 (source: ASRTM-PHREEQC):
 - ``src/asrtm_phreeqc/reactive_transport_policy_2d.py`` (``ReactiveTransportPolicy2D``,
   ``reactive_front_seed_regions``, ``reactive_front_seed_points``,
@@ -12,7 +12,7 @@ Provenance: ``adapt_mesh`` is a skeleton stub. The rest is copied from ASRTM-PHR
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Mapping
+from typing import Mapping
 
 import numpy as np
 from scipy.spatial import cKDTree
@@ -23,11 +23,6 @@ from adaptdg.transport.two_d import (
     refine_marked_triangles,
     triangle_characteristic_sizes,
 )
-
-
-def adapt_mesh(mesh: Any, marked_refine: Any, marked_coarsen: Any | None = None) -> Any:
-    """Return an adapted mesh from refinement/coarsening markers."""
-    raise NotImplementedError
 
 
 def _triangle_restart_permutation(

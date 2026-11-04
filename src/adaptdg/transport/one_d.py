@@ -1,4 +1,4 @@
-"""DG1 / CG1 one-dimensional transport solvers and a step stub.
+"""DG1 / CG1 one-dimensional transport solvers.
 
 Extracted from ASRTM-PHREEQC without changing numerics or
 public names. Two source modules live here, section by section; each keeps the
@@ -25,18 +25,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import gc
-from typing import Any
 
 import numpy as np
 
 from adaptdg.transport._linear import ReusableLinearProblem
 from adaptdg.marking import dorfler_mark_1d
 from adaptdg.transfer.one_d import conservative_remap_1d
-
-
-def transport_step(c_old: Any, flow: Any, dt: float, **options: Any) -> Any:
-    """Advance a DG1 concentration field by one step with the given flow."""
-    raise NotImplementedError
 
 
 # ---------------------------------------------------------------------------
